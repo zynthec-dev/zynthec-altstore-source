@@ -12,40 +12,6 @@
       "versionDescription": "Erste öffentliche Beta von miPet.",
       "screenshots": []
     },
-    "com.google.ios.youtubemusic": {
-      "ipaFile": "YouTube-Music-Ultimate-2.4.1_9.37.2-no-cast.ipa",
-      "name": "YouTube Music Ultimate",
-      "developerName": "Google / Ultimate",
-      "subtitle": "YouTube Music mit den Ultimate-Erweiterungen.",
-      "localizedDescription": "Die bereitgestellte Originalversion von YouTube Music Ultimate mit angepasst sichtbarem Namen und deaktiviertem Cast-Modul.",
-      "category": "entertainment",
-      "tintColor": "#FF0033",
-      "iconFile": "catalog/assets/youtube-music-ultimate-icon.png",
-      "marketingVersion": "2.4.1_9.37.2-no-cast",
-      "versionDescription": "Neu aus der bereitgestellten Original-IPA erstellt: sichtbarer Name YouTube Music Ultimate, Cast-Schaltfläche entfernt; AirPlay bleibt über die iOS-Systemausgabe verfügbar.",
-      "appPermissions": {
-        "entitlements": [
-          "aps-environment",
-          "com.apple.developer.siri",
-          "com.apple.developer.carplay-audio",
-          "com.apple.developer.coremedia.allow-alternate-video-decoder-selection",
-          "com.apple.security.application-groups",
-          "com.apple.developer.associated-domains",
-          "keychain-access-groups"
-        ],
-        "privacy": {
-          "NSBluetoothAlwaysUsageDescription": "YouTube Music uses Bluetooth to locate and connect to Chromecast and other devices.",
-          "NSBluetoothPeripheralUsageDescription": "YouTube Music uses Bluetooth to locate and connect to Chromecast and other devices.",
-          "NSCameraUsageDescription": "To take a profile picture, allow YouTube Music to access your camera.",
-          "NSContactsUsageDescription": "This will allow you to invite your family into your membership plan.",
-          "NSLocalNetworkUsageDescription": "Access to your network allows YouTube Music to discover and connect to devices such as your TV.",
-          "NSMicrophoneUsageDescription": "This lets you include audio with your videos.",
-          "NSPhotoLibraryAddUsageDescription": "To save images, allow YouTube Music to access your photo library.",
-          "NSPhotoLibraryUsageDescription": "To choose a profile picture, allow YouTube Music to access your photos."
-        }
-      },
-      "screenshots": []
-    },
     "com.zynthec.zposition": {
       "ipaFile": "zPosition-Control-1.0.2-unsigned.ipa",
       "name": "zPosition Control",
