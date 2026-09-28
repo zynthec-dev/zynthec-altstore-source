@@ -11,28 +11,6 @@
       "iconFile": "catalog/assets/mipet-icon.png",
       "versionDescription": "Erste öffentliche Beta von miPet.",
       "screenshots": []
-    },
-    "com.zynthec.zposition": {
-      "ipaFile": "zPosition-Control-1.0.2-unsigned.ipa",
-      "name": "zPosition Control",
-      "developerName": "zynthec",
-      "subtitle": "Orte und Routen direkt auf deinem iPhone.",
-      "localizedDescription": "Native Karten, Ortssuche, gespeicherte Orte und Routen, GPX-Import/-Export und Routenplayer. Importiert standardisierte RPPairing-Dateien und kombinierte Pairing-Dateien aus iLoader, idevice_pair oder zur Verwendung mit SideStore. Keine Bindung an eine bestimmte Pairing-App. Integrierter lokaler Tunnel und nativer DVT-Verbindungspfad. Reine ältere Lockdown-Dateien werden mit Erklärung abgelehnt. MVP: echte GPS-Simulation auf einem physischen iPhone noch nicht verifiziert. Routen pausieren im Hintergrund. Home-Screen-Name: zPosition.",
-      "category": "utilities",
-      "tintColor": "#00A9F4",
-      "marketingVersion": "1.0.2",
-      "versionDescription": "Standard-Pairing-Import ohne proprietäre App-Abhängigkeit. Öffnen mit zPosition für .mobiledevicepairing, .mobiledevicepair, .rppairing und .plist. Unterstützt XML-/Binär-Plists und kombinierte Lockdown/RPPairing-Dateien. Neues natives Icon für Light, Dark, Clear und Tinted. Selbst mit einem kompatiblen Sideloading-Werkzeug signieren; Network-Extension-fähige Profile erforderlich. Physischer GPS-Test steht aus.",
-      "screenshots": [],
-      "appPermissions": {
-        "entitlements": [
-          "com.apple.developer.networking.networkextension"
-        ],
-        "privacy": {
-          "NSLocationWhenInUseUsageDescription": "Center the map on your actual location. This permission does not simulate your device location.",
-          "NSLocalNetworkUsageDescription": "Connect locally to this iPhone’s developer location service. No location data is sent to a custom server."
-        }
-      },
-      "iconFile": "catalog/assets/zposition-icon.png"
     }
   },
   "uploadedApps": [],
