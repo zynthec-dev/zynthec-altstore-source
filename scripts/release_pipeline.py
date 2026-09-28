@@ -1,0 +1,207 @@
+#!/usr/bin/env python3
+"""Publish browser-staged IPAs, then download only catalogued release assets."""
+from __future__ import annotations
+
+import argparse
+import base64
+import datetime as dt
+import hashlib
+import io
+import json
+import os
+import plistlib
+import re
+import secrets
+import subprocess
+import tempfile
+import urllib.request
+import zipfile
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parents[1]
+CONTENT = ROOT / "catalog" / "content.json"
+SETTINGS = ROOT / "catalog" / "settings.json"
+ASSET_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\.ipa\Z")
+RELEASE_TAG = re.compile(r"app-[a-z0-9-]+-v[a-z0-9._-]+-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}\Z")
+SHA = re.compile(r"[a-f0-9]{40}\Z")
+MAX_BROWSER_IPA_BYTES = 70_000_000
+
+
+def read_json(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def apps(content: dict[str, Any]) -> list[tuple[str | None, dict[str, Any]]]:
+    return [*content.get("localApps", {}).items(), *((None, app) for app in content.get("uploadedApps", []))]
+
+
+def selected_assets(content: dict[str, Any], default_tag: str) -> list[tuple[str, str]]:
+    result: list[tuple[str, str]] = []
+    for _, app in apps(content):
+        filename = app.get("ipaFile", "")
+        tag = app.get("releaseTag") or default_tag
+        if not isinstance(filename, str) or not ASSET_NAME.fullmatch(filename):
+            raise ValueError(f"Invalid IPA filename: {filename!r}")
+        if not isinstance(tag, str) or not (tag == default_tag or RELEASE_TAG.fullmatch(tag)):
+            raise ValueError(f"Invalid release tag: {tag!r}")
+        result.append((tag, filename))
+    if len(result) != len(set(result)):
+        raise ValueError("The same release asset is assigned to multiple apps")
+    return result
+
+
+def validate_pending(app: dict[str, Any], default_tag: str) -> tuple[str, str, int, str]:
+    pending = app["pendingUpload"]
+    sha, tag, size = pending.get("sha"), pending.get("tag"), pending.get("size")
+    filename = app.get("ipaFile", "")
+    if not isinstance(sha, str) or not SHA.fullmatch(sha):
+        raise ValueError("Invalid staged IPA SHA")
+    if not isinstance(tag, str) or not RELEASE_TAG.fullmatch(tag) or tag == default_tag:
+        raise ValueError("Invalid staged IPA release tag")
+    if tag != app.get("releaseTag"):
+        raise ValueError("Staged IPA tag does not match app metadata")
+    if not isinstance(filename, str) or not ASSET_NAME.fullmatch(filename):
+        raise ValueError("Invalid staged IPA filename")
+    if type(size) is not int or not 0 < size <= MAX_BROWSER_IPA_BYTES:
+        raise ValueError("Invalid staged IPA size")
+    if not app.get("name") or not app.get("marketingVersion") or not app.get("versionDescription"):
+        raise ValueError("App name, version and change notes are required for an IPA update")
+    return sha, tag, size, filename
+
+
+def fetch_blob(repo: str, sha: str, token: str) -> bytes:
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{repo}/git/blobs/{sha}",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=120) as response:
+        payload = json.load(response)
+    if payload.get("encoding") != "base64":
+        raise ValueError("GitHub did not return a base64 Git blob")
+    data = base64.b64decode(payload["content"], validate=False)
+    actual_sha = hashlib.sha1(f"blob {len(data)}\0".encode() + data).hexdigest()
+    if actual_sha != sha:
+        raise ValueError("Staged IPA checksum does not match its Git blob SHA")
+    return data
+
+
+def ipa_bundle_id(data: bytes) -> str:
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        info_paths = [name for name in archive.namelist() if re.fullmatch(r"Payload/[^/]+\.app/Info\.plist", name)]
+        if len(info_paths) != 1:
+            raise ValueError("IPA must contain exactly one app Info.plist")
+        info = plistlib.loads(archive.read(info_paths[0]))
+    return info["CFBundleIdentifier"]
+
+
+def publish_pending(content: dict[str, Any], repo: str, default_tag: str, token: str) -> bool:
+    changed = False
+    for bundle_id, app in apps(content):
+        if "pendingUpload" not in app:
+            continue
+        sha, tag, size, filename = validate_pending(app, default_tag)
+        data = fetch_blob(repo, sha, token)
+        if len(data) != size:
+            raise ValueError(f"Staged IPA size mismatch: {filename}")
+        embedded_bundle_id = ipa_bundle_id(data)
+        if bundle_id is not None and embedded_bundle_id != bundle_id:
+            raise ValueError(f"IPA bundle ID does not match catalog entry: {filename}")
+        if embedded_bundle_id in content.get("excludedBundleIdentifiers", []):
+            raise ValueError(f"Excluded app cannot be uploaded: {embedded_bundle_id}")
+        if bundle_id is None:
+            app["bundleIdentifier"] = embedded_bundle_id
+        with tempfile.TemporaryDirectory(prefix="source-ipa-") as folder:
+            path = Path(folder) / filename
+            path.write_bytes(data)
+            existing = subprocess.run(
+                ["gh", "release", "view", tag, "--repo", repo],
+                capture_output=True, text=True, check=False,
+            )
+            if existing.returncode:
+                subprocess.run(
+                    ["gh", "release", "create", tag, "--repo", repo,
+                     "--title", f"{app['name']} {app['marketingVersion']}",
+                     "--notes", app["versionDescription"], "--target", "main"],
+                    check=True,
+                )
+            subprocess.run(["gh", "release", "upload", tag, str(path), "--repo", repo, "--clobber"], check=True)
+        del app["pendingUpload"]
+        changed = True
+    if changed:
+        CONTENT.write_text(json.dumps(content, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return changed
+
+
+def download_selected(content: dict[str, Any], repo: str, default_tag: str) -> None:
+    for tag, filename in selected_assets(content, default_tag):
+        subprocess.run(
+            ["gh", "release", "download", tag, "--repo", repo,
+             "--pattern", filename, "--dir", str(ROOT), "--clobber"],
+            check=True,
+        )
+        if not (ROOT / filename).is_file():
+            raise ValueError(f"Release asset not found: {tag}/{filename}")
+
+
+def new_release_tag(name: str, version: str) -> str:
+    def slug(value: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")[:40] or "app"
+    timestamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return f"app-{slug(name)}-v{slug(version)}-{timestamp}-{secrets.token_hex(4)}"
+
+
+def publish_url_file(content: dict[str, Any], repo: str, path: Path, name: str, version: str, notes: str) -> str:
+    if not path.is_file() or not ASSET_NAME.fullmatch(path.name):
+        raise ValueError("The IPA filename is invalid")
+    if not name.strip() or not version.strip() or not notes.strip():
+        raise ValueError("App name, version and change notes are required")
+    bundle_id = ipa_bundle_id(path.read_bytes())
+    if bundle_id in content.get("excludedBundleIdentifiers", []):
+        raise ValueError(f"Excluded app cannot be uploaded: {bundle_id}")
+    tag = new_release_tag(name, version)
+    subprocess.run(
+        ["gh", "release", "create", tag, "--repo", repo, "--title", f"{name} {version}",
+         "--notes", notes, "--target", "main"], check=True,
+    )
+    subprocess.run(["gh", "release", "upload", tag, str(path), "--repo", repo], check=True)
+    app = content.get("localApps", {}).get(bundle_id)
+    if app is None:
+        app = next((entry for entry in content.get("uploadedApps", []) if entry.get("bundleIdentifier") == bundle_id), None)
+    if app is None:
+        app = {"bundleIdentifier": bundle_id, "developerName": "zynthec", "category": "other", "screenshots": []}
+        content.setdefault("uploadedApps", []).append(app)
+    app.update({"name": name, "marketingVersion": version, "versionDescription": notes,
+                "ipaFile": path.name, "releaseTag": tag})
+    CONTENT.write_text(json.dumps(content, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return tag
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("operation", choices=("publish", "download", "publish-url"))
+    args = parser.parse_args()
+    content, settings = read_json(CONTENT), read_json(SETTINGS)
+    repo, default_tag = settings["githubRepository"], settings.get("releaseTag", "apps")
+    if args.operation == "publish":
+        if any("pendingUpload" in app for _, app in apps(content)):
+            token = os.environ.get("GH_TOKEN")
+            if not token:
+                raise ValueError("GH_TOKEN is required to publish staged IPAs")
+            publish_pending(content, repo, default_tag, token)
+    elif args.operation == "download":
+        download_selected(content, repo, default_tag)
+    else:
+        filename = os.environ["ASSET_NAME"]
+        if not ASSET_NAME.fullmatch(filename):
+            raise ValueError("The IPA filename is invalid")
+        path = ROOT / filename
+        publish_url_file(content, repo, path, os.environ["APP_NAME"], os.environ["APP_VERSION"], os.environ["CHANGE_NOTES"])
+
+
+if __name__ == "__main__":
+    main()

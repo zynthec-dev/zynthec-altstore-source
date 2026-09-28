@@ -77,7 +77,7 @@ def ipa_app(ipa: Path, settings: dict[str, Any], content: dict[str, Any]) -> dic
     build = str(info.get("CFBundleVersion", "1"))
     release_name = ipa.name
     repo = settings["githubRepository"]
-    tag = settings.get("releaseTag", "apps")
+    tag = override.get("releaseTag") or settings.get("releaseTag", "apps")
     output_icon = DIST / "assets" / "apps" / f"{bundle_id}.png"
     icon_file = override.get("iconFile")
     if icon_file:
@@ -152,12 +152,16 @@ def build() -> None:
     shutil.copytree(ROOT / "site", DIST)
     (DIST / "assets").mkdir(parents=True, exist_ok=True)
     shutil.copy2(ROOT / "icon.png", DIST / "assets" / "source-icon.png")
-    # Explicit catalog selections win over filename ordering.
+    # Only catalogued files are published; ignored local IPAs and old releases stay private to this build.
     selected = content.get("localApps", {})
     excluded = set(content.get("excludedBundleIdentifiers", []))
+    configured_apps = [*selected.values(), *content.get("uploadedApps", [])]
+    selected_files = {app.get("ipaFile") for app in configured_apps if app.get("ipaFile")}
     paths = []
     available_bundle_ids = set()
     for path in sorted(ROOT.glob("*.ipa")):
+        if path.name not in selected_files:
+            continue
         info, _ = plist_from_ipa(path)
         if info["CFBundleIdentifier"] in excluded:
             continue
@@ -170,6 +174,9 @@ def build() -> None:
         preferred = metadata.get("ipaFile")
         if bundle_id in available_bundle_ids and preferred and not (ROOT / preferred).is_file():
             raise ValueError(f"{bundle_id}: configured IPA not found: {preferred}")
+    missing_files = selected_files - {path.name for path in paths}
+    if missing_files:
+        raise ValueError("configured IPA not found: " + ", ".join(sorted(missing_files)))
     local = [ipa_app(path, settings, content) for path in paths]
     manual = [app for app in (normalize_app(app, {"name": "zynthec", "url": settings["sourceURL"]}) for app in content.get("manualApps", [])) if app and app["bundleIdentifier"] not in excluded]
     merged: dict[str, dict[str, Any]] = {}

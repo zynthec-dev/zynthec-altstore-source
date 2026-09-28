@@ -2,6 +2,7 @@
   "localApps": {
     "de.renewitt.mipet": {
       "ipaFile": "miPet-0.3-beta.ipa",
+      "releaseTag": "apps",
       "name": "miPet",
       "developerName": "zynthec",
       "subtitle": "Dein kleiner Begleiter für iPhone und iPad.",
@@ -25,7 +26,5 @@
       "url": "https://source.zynthec.com"
     }
   ],
-  "excludedBundleIdentifiers": [
-    "com.zynthec.zloader"
-  ]
+  "excludedBundleIdentifiers": ["com.zynthec.zloader"]
 }

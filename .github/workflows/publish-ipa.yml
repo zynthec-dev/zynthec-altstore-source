@@ -7,7 +7,16 @@ on:
         description: Direct HTTPS URL of the IPA to publish
         required: true
       asset_name:
-        description: Filename in the apps release, ending in .ipa
+        description: IPA filename, ending in .ipa
+        required: true
+      app_name:
+        description: App name shown in the source
+        required: true
+      app_version:
+        description: Version shown under the app name
+        required: true
+      change_notes:
+        description: What changed in this IPA update
         required: true
 
 permissions:
@@ -25,17 +34,24 @@ jobs:
           ASSET_NAME: ${{ inputs.asset_name }}
         run: |
           case "$ARTIFACT_URL" in https://*) ;; *) exit 1 ;; esac
-          case "$ASSET_NAME" in *.ipa) ;; *) exit 1 ;; esac
+          [[ "$ASSET_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.ipa$ ]]
       - name: Download IPA
         env:
           ARTIFACT_URL: ${{ inputs.artifact_url }}
           ASSET_NAME: ${{ inputs.asset_name }}
-        run: curl --fail --location --proto '=https' --output "$ASSET_NAME" "$ARTIFACT_URL"
-      - name: Create release if needed and upload
+        run: curl --fail --location --proto '=https' --proto-redir '=https' --retry 3 --output "$ASSET_NAME" "$ARTIFACT_URL"
+      - name: Create versioned release and update source metadata
         env:
           GH_TOKEN: ${{ github.token }}
           ASSET_NAME: ${{ inputs.asset_name }}
+          APP_NAME: ${{ inputs.app_name }}
+          APP_VERSION: ${{ inputs.app_version }}
+          CHANGE_NOTES: ${{ inputs.change_notes }}
         run: |
-          gh release view apps >/dev/null 2>&1 || gh release create apps --title "App downloads" --notes "Binary releases used by zynthec-source."
-          gh release upload apps "$ASSET_NAME" --clobber
-          gh workflow run deploy.yml
+          python3 scripts/release_pipeline.py publish-url
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalog/content.json
+          git commit -m "Publish $APP_NAME $APP_VERSION"
+          git push origin HEAD:main
+          gh workflow run deploy.yml --ref main

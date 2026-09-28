@@ -26,6 +26,7 @@ summary { cursor:pointer; padding:10px 0; }
 .item-title,.item-description { margin:0; }
 .item-title { display:block; font-size:17px; font-weight:600; }
 .item-description { display:block; color:var(--muted); font-size:13px; margin-top:5px; overflow-wrap:anywhere; line-height:1.4; }
+.pin-label { display:inline-block; margin-top:7px; color:var(--accent); font-size:12px; font-weight:600; }
 .admin-item .chevron { margin-left:auto; color:var(--muted); font-size:24px; }
 .editor-body { padding:34px; }
 .editor-body h2 { font-size:28px; font-weight:650; letter-spacing:-.025em; margin:0 0 24px; overflow-wrap:anywhere; }

@@ -29,6 +29,7 @@ async function api(path, options = {}) {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${state.token}`,
       "X-GitHub-Api-Version": "2022-11-28",
+      ...(typeof options.body === "string" ? { "Content-Type": "application/json" } : {}),
       ...(options.headers || {})
     }
   });
@@ -72,11 +73,11 @@ function records() {
 
 function render() {
   const apps = records();
-  $("#appsList").innerHTML = apps.map(({ kind, key, app }) => `<button type="button" class="admin-item" data-kind="${kind}" data-key="${escapeHTML(key)}"><span class="admin-item-mark" aria-hidden="true">IPA</span><span class="admin-item-copy"><span class="item-title">${escapeHTML(app.name || app.ipaFile || key)}</span><span class="item-description">${escapeHTML(app.marketingVersion ? `Version ${app.marketingVersion} · ` : "")}${escapeHTML(app.ipaFile || key)}</span></span><span class="chevron" aria-hidden="true">›</span></button>`).join("") || '<div class="empty-shot">Noch keine Apps. Über „App hochladen“ kannst du die erste IPA hinzufügen.</div>';
+  $("#appsList").innerHTML = apps.map(({ kind, key, app }) => `<button type="button" class="admin-item" data-kind="${kind}" data-key="${escapeHTML(key)}"><span class="admin-item-mark" aria-hidden="true">IPA</span><span class="admin-item-copy"><span class="item-title">${escapeHTML(app.name || app.ipaFile || key)}</span><span class="item-description">${escapeHTML(app.marketingVersion ? `Version ${app.marketingVersion} · ` : "")}${escapeHTML(app.ipaFile || key)}</span>${app.pendingUpload ? '<span class="pin-label">Veröffentlichung läuft</span>' : ""}</span><span class="chevron" aria-hidden="true">›</span></button>`).join("") || '<div class="empty-shot">Noch keine Apps. Über „App hochladen“ kannst du die erste IPA hinzufügen.</div>';
 }
 
 function defaultApp() {
-  return { name: "", developerName: "zynthec", subtitle: "", localizedDescription: "", category: "utilities", tintColor: "#7045B8", marketingVersion: "", versionDescription: "Neue Version", screenshots: [], ipaFile: "" };
+  return { name: "", developerName: "zynthec", subtitle: "", localizedDescription: "", category: "utilities", tintColor: "#7045B8", marketingVersion: "", versionDescription: "", screenshots: [], ipaFile: "" };
 }
 
 function field(app, key, label, type) {
@@ -93,7 +94,7 @@ function openEditor(kind = "new", key = null) {
   const isNew = kind === "new";
   $("#editorTitle").textContent = isNew ? "App hochladen" : (record.app.name || "App bearbeiten");
   $("#editorFields").innerHTML = `${editableFields.map(args => field(record.app, ...args)).join("")}
-    <label class="field">${isNew ? "IPA-Datei" : "Neue IPA-Version (optional)"}<input name="ipa" type="file" accept=".ipa,application/octet-stream" ${isNew ? "required" : ""}></label>
+    <label class="field">${isNew ? "IPA-Datei" : "Neue IPA-Version (optional)"}<input name="ipa" type="file" accept=".ipa,application/octet-stream" ${isNew ? "required" : ""}><small>Bei jeder neuen IPA entsteht ein eigener Release-Tag mit dem Text aus „Neu in dieser Version“. Browser-Upload bis 70 MB.</small></label>
     <label class="field">${isNew ? "App-Icon als PNG (optional)" : "Neues App-Icon als PNG (optional)"}<input name="icon" type="file" accept="image/png"></label>`;
   $("#deleteItem").classList.toggle("hidden", isNew);
   $("#editorStatus").textContent = "";
@@ -110,33 +111,31 @@ function collect() {
   return { app, ipa: form.get("ipa"), icon: form.get("icon") };
 }
 
-async function ensureRelease() {
-  try { return await api("/releases/tags/apps"); }
-  catch (error) {
-    if (error.status !== 404) throw error;
-    return api("/releases", { method: "POST", body: JSON.stringify({ tag_name: "apps", name: "App downloads", body: "IPA releases used by zynthec-source." }) });
-  }
-}
-
 function releaseAssetName(filename) {
-  return filename.trim().replace(/\s+/g, ".");
+  const name = filename.trim().replace(/\s+/g, ".").replace(/[^A-Za-z0-9._-]/g, "-").replace(/\.ipa$/i, ".ipa");
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*\.ipa$/.test(name) || name.length > 120) throw new Error("Bitte eine IPA-Datei mit kurzem Dateinamen auswählen.");
+  return name;
 }
 
-async function uploadIPA(file) {
-  const release = await ensureRelease();
-  const assetName = releaseAssetName(file.name);
-  const existing = release.assets.find(asset => asset.name === assetName);
-  if (existing) await api(`/releases/assets/${existing.id}`, { method: "DELETE" });
-  const uploadURL = release.upload_url.replace("{?name,label}", "") + `?name=${encodeURIComponent(assetName)}`;
-  const response = await fetch(uploadURL, { method: "POST", headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${state.token}`, "X-GitHub-Api-Version": "2022-11-28", "Content-Type": "application/octet-stream" }, body: file });
-  if (!response.ok) throw new ApiError((await response.json()).message || "IPA-Upload fehlgeschlagen", response.status);
-  return assetName;
+function releaseTag(app) {
+  const slug = value => value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "app";
+  const date = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  return `app-${slug(app.name)}-v${slug(app.marketingVersion)}-${date}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
-async function deleteIPA(filename) {
+async function stageIPA(file, app) {
+  if (file.size > 70_000_000) throw new Error("Diese IPA ist größer als 70 MB. Bitte über den GitHub-Workflow mit direkter HTTPS-Datei-URL veröffentlichen.");
+  if (!app.marketingVersion || !app.versionDescription) throw new Error("Für eine neue IPA sind Versionsnummer und Änderungstext erforderlich.");
+  const name = releaseAssetName(file.name);
+  const content = encodeBytes(new Uint8Array(await file.arrayBuffer()));
+  const result = await api("/git/blobs", { method: "POST", body: JSON.stringify({ content, encoding: "base64" }) });
+  return { name, tag: releaseTag(app), sha: result.sha, size: file.size };
+}
+
+async function deleteIPA(filename, tag = "apps") {
   if (!filename) return;
   let release;
-  try { release = await api("/releases/tags/apps"); } catch (error) { if (error.status === 404) return; throw error; }
+  try { release = await api(`/releases/tags/${encodeURIComponent(tag)}`); } catch (error) { if (error.status === 404) return; throw error; }
   const asset = release.assets.find(item => item.name === filename);
   if (asset) await api(`/releases/assets/${asset.id}`, { method: "DELETE" });
 }
@@ -168,12 +167,13 @@ async function commitContent(message) {
 async function save() {
   const { app, ipa, icon } = collect();
   const isNew = state.edit.kind === "new";
-  $("#editorStatus").textContent = ipa?.size ? "IPA wird hochgeladen …" : "Änderungen werden gespeichert …";
+  $("#editorStatus").textContent = ipa?.size ? "IPA wird sicher bei GitHub zwischengespeichert …" : "Änderungen werden gespeichert …";
   try {
     if (ipa?.size) {
-      const assetName = await uploadIPA(ipa);
-      if (state.edit.original.ipaFile && state.edit.original.ipaFile !== assetName) await deleteIPA(state.edit.original.ipaFile);
-      app.ipaFile = assetName;
+      const staged = await stageIPA(ipa, app);
+      app.ipaFile = staged.name;
+      app.releaseTag = staged.tag;
+      app.pendingUpload = { sha: staged.sha, tag: staged.tag, size: staged.size };
     }
     if (icon?.size) {
       const path = safeAssetName(app, icon);
@@ -186,7 +186,7 @@ async function save() {
     await commitContent(`admin: ${isNew ? "add" : "update"} app ${app.name}`);
     $("#editor").close();
     render();
-    toast(isNew ? "App hochgeladen – Deployment läuft" : "App gespeichert – Deployment läuft");
+    toast(ipa?.size ? "IPA vorgemerkt – GitHub erstellt Release und Source" : "App gespeichert – Deployment läuft");
   } catch (error) {
     $("#editorStatus").textContent = error.message;
     await load();
@@ -197,7 +197,7 @@ async function remove() {
   if (!confirm(`„${state.edit.app.name || "Diese App"}“ samt IPA wirklich entfernen?`)) return;
   $("#editorStatus").textContent = "App und IPA werden entfernt …";
   try {
-    await deleteIPA(state.edit.app.ipaFile);
+    await deleteIPA(state.edit.app.ipaFile, state.edit.app.releaseTag);
     await deleteFile(state.edit.app.iconFile);
     if (state.edit.kind === "local") delete state.content.localApps[state.edit.key];
     else state.content.uploadedApps.splice(Number(state.edit.key), 1);

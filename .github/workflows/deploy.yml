@@ -17,25 +17,31 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Download owned IPA release assets
+      - name: Publish IPAs staged in the Admin page
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view apps >/dev/null 2>&1; then
-            release_id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/apps" --jq .id)
-            gh api --paginate "repos/$GITHUB_REPOSITORY/releases/$release_id/assets?per_page=100" \
-              --jq '.[] | select(.name | endswith(".ipa")) | .browser_download_url' > /tmp/ipa-assets.txt
-            while IFS= read -r asset_url; do
-              curl --fail --location --retry 3 --remote-name "$asset_url"
-            done < /tmp/ipa-assets.txt
-          else
-            echo "::warning::Release 'apps' does not exist yet; deploying the admin page with an empty source."
+          python3 scripts/release_pipeline.py publish
+          if ! git diff --quiet -- catalog/content.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add catalog/content.json
+            git commit -m "Publish staged IPA releases"
+            git push origin HEAD:main
           fi
+      - name: Download catalogued IPA assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/release_pipeline.py download
       - name: Build source and admin page
         run: python3 scripts/build.py
       - name: Validate output

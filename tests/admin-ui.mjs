@@ -26,10 +26,14 @@ try {
   'de.renewitt.mipet': { name: 'miPet', ipaFile: 'miPet-0.3-beta.ipa', marketingVersion: '0.3-beta' }
  }, uploadedApps: [] };
  await page.route('https://api.github.com/**', async route => {
-  if (route.request().method() !== 'GET') mutations.push(route.request().method());
+  if (route.request().method() !== 'GET') mutations.push({ method: route.request().method(), url: route.request().url(), body: route.request().postData() });
   const payload = route.request().url().includes('/contents/')
-   ? { sha: 'TEST_ONLY', content: Buffer.from(JSON.stringify(content)).toString('base64') }
-   : { permissions: { push: true } };
+   ? route.request().method() === 'GET'
+     ? { sha: 'TEST_ONLY', content: Buffer.from(JSON.stringify(content)).toString('base64') }
+     : { content: { sha: 'NEXT_TEST_SHA' } }
+   : route.request().url().endsWith('/git/blobs')
+     ? { sha: 'a'.repeat(40) }
+     : { permissions: { push: true } };
   await route.fulfill({ contentType: 'application/json', body: JSON.stringify(payload) });
  });
  await page.goto(base);
@@ -61,6 +65,23 @@ try {
  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
  await page.emulateMedia({ reducedMotion: 'reduce' });
  assert.equal(await page.locator('.primary-button').first().evaluate(e => getComputedStyle(e).transitionDuration), '0s');
+ await page.getByRole('button', { name: 'Schließen', exact: true }).click();
+ await page.getByRole('button', { name: 'App hochladen' }).click();
+ await page.locator('input[name="name"]').fill('Demo App');
+ await page.locator('input[name="marketingVersion"]').fill('1.0');
+ await page.locator('textarea[name="versionDescription"]').fill('Erste Testversion');
+ await page.locator('input[name="ipa"]').setInputFiles({ name: 'Demo-1.0.ipa', mimeType: 'application/octet-stream', buffer: Buffer.from('test ipa') });
+ await page.getByRole('button', { name: 'Speichern' }).click();
+ await page.getByText('Veröffentlichung läuft').waitFor();
+ const blob = mutations.find(item => item.url.endsWith('/git/blobs'));
+ assert.equal(blob.method, 'POST');
+ assert.equal(JSON.parse(blob.body).encoding, 'base64');
+ const saved = mutations.find(item => item.method === 'PUT' && item.url.includes('/contents/catalog/content.json'));
+ const staged = JSON.parse(Buffer.from(JSON.parse(saved.body).content, 'base64').toString()).uploadedApps[0];
+ assert.equal(staged.name, 'Demo App');
+ assert.equal(staged.versionDescription, 'Erste Testversion');
+ assert.match(staged.releaseTag, /^app-demo-app-v1-0-\d{8}T\d{6}Z-[a-f0-9]{8}$/);
+ assert.equal(staged.pendingUpload.sha, 'a'.repeat(40));
  assert.deepEqual(errors, []);
- console.log('PASS: app ordering, keyboard editor, cancel without mutation, theme persistence, mobile overflow, reduced motion and browser errors');
+ console.log('PASS: app ordering, editor, staged browser IPA upload, versioned tag, theme, mobile layout and browser errors');
 } finally { await browser.close(); }
