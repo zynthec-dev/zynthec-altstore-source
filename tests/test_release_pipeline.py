@@ -34,6 +34,34 @@ class ReleasePipelineTests(unittest.TestCase):
         self.assertRegex(first, pipeline.RELEASE_TAG)
         self.assertNotEqual(first, second)
 
+    def test_public_download_selects_exact_asset_and_preserves_release_date(self):
+        data = test_ipa()
+        asset = {"name": "miPet-0.4.ipa", "size": len(data),
+                 "browser_download_url": "https://github.com/example/download/miPet-0.4.ipa",
+                 "digest": "sha256:" + hashlib.sha256(data).hexdigest(),
+                 "updated_at": "2026-09-28T12:00:00Z"}
+        release = {"assets": [{"name": "unselected.ipa"}, asset]}
+        with tempfile.TemporaryDirectory() as folder, patch.object(pipeline, "ROOT", Path(folder)), patch.object(
+            pipeline.urllib.request, "urlopen", side_effect=[io.BytesIO(json.dumps(release).encode()), io.BytesIO(data)]
+        ) as fetch:
+            pipeline.download_selected({"localApps": {"de.renewitt.mipet": {"ipaFile": asset["name"]}}}, "owner/repo", "apps")
+            path = Path(folder) / asset["name"]
+            self.assertEqual(path.read_bytes(), data)
+            self.assertEqual(path.stat().st_mtime, 1790596800)
+            self.assertEqual(fetch.call_args_list[1].args[0].full_url, asset["browser_download_url"])
+            self.assertNotIn("Authorization", fetch.call_args_list[0].args[0].headers)
+
+    def test_public_download_rejects_corrupt_release_asset(self):
+        data = test_ipa()
+        release = {"assets": [{"name": "miPet.ipa", "size": len(data),
+                   "browser_download_url": "https://github.com/example/download/miPet.ipa",
+                   "digest": "sha256:" + "0" * 64}]}
+        with tempfile.TemporaryDirectory() as folder, patch.object(pipeline, "ROOT", Path(folder)), patch.object(
+            pipeline.urllib.request, "urlopen", side_effect=[io.BytesIO(json.dumps(release).encode()), io.BytesIO(data)]
+        ):
+            with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                pipeline.download_selected({"localApps": {"de.renewitt.mipet": {"ipaFile": "miPet.ipa"}}}, "owner/repo", "apps")
+
     def test_staged_upload_creates_release_and_preserves_change_notes(self):
         data = test_ipa()
         sha = hashlib.sha1(f"blob {len(data)}\0".encode() + data).hexdigest()
@@ -49,7 +77,7 @@ class ReleasePipelineTests(unittest.TestCase):
             with patch.object(pipeline, "CONTENT", output), patch.object(pipeline, "fetch_blob", return_value=data), patch.object(
                 pipeline.subprocess, "run", side_effect=[subprocess.CompletedProcess([], 1), subprocess.CompletedProcess([], 0), subprocess.CompletedProcess([], 0)]
             ) as run:
-                self.assertTrue(pipeline.publish_pending(content, "zynthec-dev/zynthec-source", "apps", "test-token"))
+                self.assertTrue(pipeline.publish_pending(content, "zynthec-dev/zynthec-altstore-source", "apps", "test-token"))
             self.assertNotIn("pendingUpload", json.loads(output.read_text())["localApps"]["de.renewitt.mipet"])
             self.assertIn("Neue Animationen", run.call_args_list[1].args[0])
             self.assertIn(tag, run.call_args_list[2].args[0])
@@ -65,7 +93,7 @@ class ReleasePipelineTests(unittest.TestCase):
         }}, "uploadedApps": []}
         with patch.object(pipeline, "fetch_blob", return_value=data), patch.object(pipeline.subprocess, "run") as run:
             with self.assertRaisesRegex(ValueError, "bundle ID"):
-                pipeline.publish_pending(content, "zynthec-dev/zynthec-source", "apps", "test-token")
+                pipeline.publish_pending(content, "zynthec-dev/zynthec-altstore-source", "apps", "test-token")
             run.assert_not_called()
 
     def test_direct_url_workflow_creates_versioned_release(self):
@@ -75,7 +103,7 @@ class ReleasePipelineTests(unittest.TestCase):
             ipa.write_bytes(test_ipa())
             output = Path(folder) / "content.json"
             with patch.object(pipeline, "CONTENT", output), patch.object(pipeline.subprocess, "run") as run:
-                tag = pipeline.publish_url_file(content, "zynthec-dev/zynthec-source", ipa, "miPet", "0.4", "Neue Animationen")
+                tag = pipeline.publish_url_file(content, "zynthec-dev/zynthec-altstore-source", ipa, "miPet", "0.4", "Neue Animationen")
             self.assertRegex(tag, pipeline.RELEASE_TAG)
             self.assertIn("Neue Animationen", run.call_args_list[0].args[0])
             published = json.loads(output.read_text())["localApps"]["de.renewitt.mipet"]

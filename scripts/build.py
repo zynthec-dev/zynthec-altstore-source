@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the zynthec-source feed and admin page."""
+"""Build the zynthec-altstore-source feed and admin page."""
 from __future__ import annotations
 
 import argparse
@@ -108,7 +108,7 @@ def ipa_app(ipa: Path, settings: dict[str, Any], content: dict[str, Any]) -> dic
         "developerName": override.get("developerName", "zynthec"),
         "subtitle": override.get("subtitle", "Eine App von zynthec."),
         "localizedDescription": override.get("localizedDescription", "Direkt von zynthec veröffentlicht."),
-        "iconURL": f"https://source.zynthec.com/assets/apps/{bundle_id}.png",
+        "iconURL": f"{settings['sourceURL'].rstrip('/')}/assets/apps/{bundle_id}.png",
         "tintColor": override.get("tintColor", settings["tintColor"]),
         "category": override.get("category", "other"),
         "screenshots": override.get("screenshots", []),
@@ -136,7 +136,7 @@ def normalize_app(app: dict[str, Any], origin: dict[str, str]) -> dict[str, Any]
     result = dict(app)
     result.setdefault("subtitle", f"Von {result.get('developerName', origin['name'])}")
     result.setdefault("localizedDescription", result["subtitle"])
-    result.setdefault("iconURL", "https://source.zynthec.com/assets/source-icon.png")
+    result.setdefault("iconURL", origin["url"].rstrip("/") + "/assets/source-icon.png")
     result.setdefault("category", "other")
     result.setdefault("screenshots", result.pop("screenshotURLs", []))
     result.setdefault("appPermissions", {"entitlements": [], "privacy": {}})

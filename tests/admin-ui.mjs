@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir, readFile } from 'node:fs/promises';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.ADMIN_TEST_URL || 'http://127.0.0.1:8767/admin/';
-const screenshots = process.env.ADMIN_SCREENSHOTS || '/tmp/zynthec-source-admin-qa';
+const screenshots = process.env.ADMIN_SCREENSHOTS || '/tmp/zynthec-altstore-source-admin-qa';
 await mkdir(screenshots, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
 try {

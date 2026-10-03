@@ -64,13 +64,13 @@ class BuildTests(unittest.TestCase):
         self.assertTrue(all("_origin" not in app for app in self.source["apps"]))
 
     def test_public_source_uses_canonical_domain_root(self):
-        self.assertEqual(self.source["name"], "zynthec-source")
+        self.assertEqual(self.source["name"], "zynthec-altstore-source")
         self.assertEqual(self.source["identifier"], "com.zynthec.source")
-        self.assertEqual(self.source["website"], "https://source.zynthec.com")
-        self.assertEqual(self.source["sourceURL"], "https://source.zynthec.com")
+        self.assertEqual(self.source["website"], "https://altsource.zynthec.com")
+        self.assertEqual(self.source["sourceURL"], "https://altsource.zynthec.com")
         self.assertNotIn("source.json", self.source["sourceURL"])
-        self.assertEqual(self.source["iconURL"], "https://source.zynthec.com/assets/source-icon.png")
-        self.assertTrue(all(app["iconURL"].startswith("https://source.zynthec.com/") for app in self.source["apps"]))
+        self.assertEqual(self.source["iconURL"], "https://altsource.zynthec.com/assets/source-icon.png")
+        self.assertTrue(all(app["iconURL"].startswith("https://altsource.zynthec.com/") for app in self.source["apps"]))
 
     def test_configured_apps_have_valid_release_filenames(self):
         apps = [*self.content.get("localApps", {}).values(), *self.content.get("uploadedApps", [])]

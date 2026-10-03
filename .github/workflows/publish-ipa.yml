@@ -21,7 +21,6 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 jobs:
   publish:
@@ -54,4 +53,3 @@ jobs:
           git add catalog/content.json
           git commit -m "Publish $APP_NAME $APP_VERSION"
           git push origin HEAD:main
-          gh workflow run deploy.yml --ref main

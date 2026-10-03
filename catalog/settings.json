@@ -1,12 +1,12 @@
 {
-  "name": "zynthec-source",
+  "name": "zynthec-altstore-source",
   "identifier": "com.zynthec.source",
   "subtitle": "iOS Apps von zynthec – direkt und übersichtlich.",
   "description": "Die offizielle AltStore- und SideStore-Source für Apps von zynthec.",
-  "website": "https://source.zynthec.com",
-  "sourceURL": "https://source.zynthec.com",
-  "iconURL": "https://source.zynthec.com/assets/source-icon.png",
+  "website": "https://altsource.zynthec.com",
+  "sourceURL": "https://altsource.zynthec.com",
+  "iconURL": "https://altsource.zynthec.com/assets/source-icon.png",
   "tintColor": "#7045B8",
-  "githubRepository": "zynthec-dev/zynthec-source",
+  "githubRepository": "zynthec-dev/zynthec-altstore-source",
   "releaseTag": "apps"
 }

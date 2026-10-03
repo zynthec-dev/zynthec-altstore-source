@@ -19,11 +19,11 @@
   "news": [
     {
       "identifier": "welcome-to-zynthec-apps",
-      "title": "Willkommen bei zynthec-source",
+      "title": "Willkommen bei zynthec-altstore-source",
       "caption": "Die offizielle Source für Apps von zynthec.",
       "date": "2026-09-19",
       "tintColor": "#00C7B7",
-      "url": "https://source.zynthec.com"
+      "url": "https://altsource.zynthec.com"
     }
   ],
   "excludedBundleIdentifiers": ["com.zynthec.zloader"]

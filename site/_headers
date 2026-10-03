@@ -1,0 +1,7 @@
+/admin/*
+  Cache-Control: no-cache
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: same-origin
+/assets/*
+  Cache-Control: public, max-age=300
+  Access-Control-Allow-Origin: *

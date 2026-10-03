@@ -1,4 +1,5 @@
 .DS_Store
 dist/
+.wrangler/
 *.ipa
 !fixtures/*.ipa

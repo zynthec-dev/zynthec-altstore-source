@@ -1,11 +1,11 @@
-# zynthec-source
+# zynthec-altstore-source
 
 Eine schlanke AltStore-/SideStore-Source für eigene IPA-Dateien mit browserbasierter Admin-Seite.
 
 ## Enthalten
 
-- `https://source.zynthec.com`: kompatibler AltSource-Feed direkt an der Domainwurzel.
-- `https://source.zynthec.com/admin/`: Apps hochladen, entfernen und ihre Metadaten gestalten.
+- `https://altsource.zynthec.com`: kompatibler AltSource-Feed direkt an der Domainwurzel.
+- `https://altsource.zynthec.com/admin/`: Apps hochladen, entfernen und ihre Metadaten gestalten.
 - Automatische Metadaten- und Icon-Erkennung für im Katalog ausgewählte IPA-Dateien.
 - GitHub Releases mit eigenem Tag und Änderungstext für jede neue IPA-Version.
 
@@ -14,9 +14,11 @@ Es gibt bewusst keine Installationsseite, keine Loader-Downloads, kein Konfigura
 ## Lokal bauen
 
 ```bash
+python3 scripts/release_pipeline.py download
 python3 scripts/build.py
 python3 -m unittest discover -s tests -v
-python3 -m http.server 8080 --directory dist
+# Mit Cloudflare-Routing (JSON an / und Admin unter /admin/):
+npx wrangler pages dev dist
 ```
 
 Der fertige statische Build liegt in `dist/`.
@@ -28,7 +30,7 @@ Der fertige statische Build liegt in `dist/`.
 IPAs werden nicht in Git eingecheckt. Die vorhandene miPet-Version liegt noch im Release `apps`:
 
 ```bash
-gh release create apps --title "App downloads" --notes "Binary releases used by zynthec-source."
+gh release create apps --title "App downloads" --notes "Binary releases used by zynthec-altstore-source."
 gh release upload apps miPet-0.3-beta.ipa
 ```
 
@@ -36,7 +38,7 @@ Neue Versionen erhalten beim Upload aus `/admin/` automatisch einen eigenen Rele
 
 ## Admin-Zugang
 
-Für `/admin/` wird ein Fine-grained Personal Access Token benötigt, beschränkt auf `zynthec-dev/zynthec-source` mit:
+Für `/admin/` wird ein Fine-grained Personal Access Token benötigt, beschränkt auf `zynthec-dev/zynthec-altstore-source` mit:
 
 - Repository permission `Contents: Read and write`
 - möglichst kurzer Laufzeit
@@ -51,13 +53,21 @@ Die App-Verwaltung ermöglicht:
 
 ## Deployment
 
-GitHub Actions veröffentlicht vorgemerkte IPAs, lädt ausschließlich im Katalog ausgewählte Release-Dateien, baut und testet die Source bei jedem Push. GitHub Pages stellt das Build-Artefakt bereit; Cloudflare liefert den Feed unter der eigenen Domain aus.
+Cloudflare Pages ist direkt mit `zynthec-dev/zynthec-altstore-source` verbunden. Jeder Push auf `main` baut und testet die Source und veröffentlicht den erfolgreichen Build. Der Download öffentlicher IPA-Releases funktioniert ohne GitHub-Token oder GitHub CLI im Cloudflare-Build.
 
-Der aktuelle Live-Stand wird über einen Cloudflare Worker unter `https://source.zynthec.com` ausgeliefert. Die Domainwurzel wird dabei auf das intern erzeugte `source.json` abgebildet.
+GitHub Actions veröffentlicht vorgemerkte IPAs als versionierte Releases und committet den fertigen Katalog. Dieser Commit löst den nächsten Cloudflare-Build aus. Solange eine IPA noch nicht als Release verfügbar ist, schlägt der Build fehl; der letzte erfolgreiche Stand bleibt online. Nach erfolgreicher Veröffentlichung wird der aktualisierte Katalog automatisch gebaut.
 
-- Build command bei Cloudflare Pages: `python3 scripts/build.py`
+Der Pages Worker in `site/_worker.js` liefert an der Domainwurzel das intern erzeugte `source.json` mit JSON-Content-Type und CORS aus. `/source.json` leitet auf `/` um. Das Admin-Panel und Icons werden als statische Pages-Dateien ausgeliefert. GitHub Pages wird nicht mehr zum Deployment verwendet.
+
+- Cloudflare account: `7624241f771550ac62dd106ba6b0b749`
+- Pages project: `zynthec-altstore-source`
+- Repository: `zynthec-dev/zynthec-altstore-source`
+- Production branch: `main`
+- Build command: `python3 scripts/cloudflare_build.py`
 - Output directory: `dist`
-- Custom domain: `source.zynthec.com`
+- Custom domain: `altsource.zynthec.com`
+- Admin: `https://altsource.zynthec.com/admin`
+- Die Source-ID `com.zynthec.source` bleibt für bereits hinzugefügte Sources stabil.
 
 
 ## Violette Gestaltung

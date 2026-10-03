@@ -12,9 +12,11 @@ import os
 import plistlib
 import re
 import secrets
+import shutil
 import subprocess
 import tempfile
 import urllib.request
+from urllib.parse import quote
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -138,14 +140,32 @@ def publish_pending(content: dict[str, Any], repo: str, default_tag: str, token:
 
 
 def download_selected(content: dict[str, Any], repo: str, default_tag: str) -> None:
+    releases: dict[str, dict[str, Any]] = {}
     for tag, filename in selected_assets(content, default_tag):
-        subprocess.run(
-            ["gh", "release", "download", tag, "--repo", repo,
-             "--pattern", filename, "--dir", str(ROOT), "--clobber"],
-            check=True,
-        )
-        if not (ROOT / filename).is_file():
+        if tag not in releases:
+            request = urllib.request.Request(
+                f"https://api.github.com/repos/{repo}/releases/tags/{quote(tag, safe='')}",
+                headers={"Accept": "application/vnd.github+json", "User-Agent": "zynthec-altstore-source"},
+            )
+            with urllib.request.urlopen(request, timeout=60) as response:
+                releases[tag] = json.load(response)
+        asset = next((item for item in releases[tag].get("assets", []) if item["name"] == filename), None)
+        if asset is None:
             raise ValueError(f"Release asset not found: {tag}/{filename}")
+        destination = ROOT / filename
+        request = urllib.request.Request(asset["browser_download_url"], headers={"User-Agent": "zynthec-altstore-source"})
+        with urllib.request.urlopen(request, timeout=120) as response, destination.open("wb") as output:
+            shutil.copyfileobj(response, output)
+        if destination.stat().st_size != asset["size"]:
+            raise ValueError(f"Release asset size mismatch: {tag}/{filename}")
+        digest = asset.get("digest")
+        if digest and digest.startswith("sha256:"):
+            actual_digest = hashlib.sha256(destination.read_bytes()).hexdigest()
+            if actual_digest != digest.removeprefix("sha256:"):
+                raise ValueError(f"Release asset checksum mismatch: {tag}/{filename}")
+        if asset.get("updated_at"):
+            timestamp = dt.datetime.fromisoformat(asset["updated_at"].replace("Z", "+00:00")).timestamp()
+            os.utime(destination, (timestamp, timestamp))
 
 
 def new_release_tag(name: str, version: str) -> str:

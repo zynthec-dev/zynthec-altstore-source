@@ -3,7 +3,7 @@ const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, character =>
   "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
 })[character]);
 
-const REPOSITORY = "zynthec-dev/zynthec-source";
+const REPOSITORY = "zynthec-dev/zynthec-altstore-source";
 const BRANCH = "main";
 const state = { token: "", content: null, file: null, edit: null };
 const editableFields = [
