@@ -19,24 +19,40 @@ try {
    catch { await route.fulfill({ status:404, body:'Not found' }); }
   });
  }
- const errors = []; const mutations = [];
+ const errors = []; const consoleErrors = []; const mutations = [];
  page.on('pageerror', error => errors.push(error.message));
+ page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
  const content = { localApps: {
   'example.other': { name: 'Another App', ipaFile: 'Another.ipa', marketingVersion: '1.0' },
   'de.renewitt.mipet': { name: 'miPet', ipaFile: 'miPet-0.3-beta.ipa', marketingVersion: '0.3-beta' }
  }, uploadedApps: [] };
+ let settings = { name:'zynthec-altstore-source', subtitle:'iOS Apps', description:'Offizielle Source', tintColor:'#7045B8', identifier:'com.zynthec.source', sourceURL:'https://altsource.zynthec.com', iconURL:'https://altsource.zynthec.com/assets/source-icon.png', githubRepository:'zynthec-dev/zynthec-altstore-source', releaseTag:'apps' };
+ let settingsSha = 'SETTINGS_SHA'; let remoteSettingsChanged = false; let rejectRef = false;
+ const blobs = new Map(); const trees = new Map(); let sequence = 0; let pendingTree;
+ await page.route('https://altsource.zynthec.com/assets/source-icon.png', route => route.fulfill({ contentType:'image/png', body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a4x8AAAAASUVORK5CYII=', 'base64') }));
  await page.route('https://api.github.com/**', async route => {
-  if (route.request().method() !== 'GET') mutations.push({ method: route.request().method(), url: route.request().url(), body: route.request().postData() });
-  const payload = route.request().url().includes('/contents/')
-   ? route.request().method() === 'GET'
-     ? { sha: 'TEST_ONLY', content: Buffer.from(JSON.stringify(content)).toString('base64') }
-     : { content: { sha: 'NEXT_TEST_SHA' } }
-   : route.request().url().endsWith('/git/blobs')
-     ? { sha: 'a'.repeat(40) }
-     : { permissions: { push: true } };
+  const method = route.request().method(), url = route.request().url();
+  const body = method !== 'GET' ? JSON.parse(route.request().postData() || '{}') : null;
+  if (method !== 'GET') mutations.push({ method, url, body: route.request().postData() });
+  let payload;
+  if (url.includes('/contents/catalog/settings.json')) payload = { sha:remoteSettingsChanged ? 'CHANGED_ELSEWHERE' : settingsSha, content:Buffer.from(JSON.stringify(settings)).toString('base64') };
+  else if (url.includes('/contents/')) payload = method === 'GET' ? {sha:'TEST_ONLY', content:Buffer.from(JSON.stringify(content)).toString('base64')} : {content:{sha:'NEXT_TEST_SHA'}};
+  else if (url.endsWith('/git/blobs')) { const sha = (++sequence).toString(16).padStart(40, 'a'); blobs.set(sha, Buffer.from(body.content, 'base64')); payload = { sha }; }
+  else if (url.endsWith('/git/trees')) { const sha = `tree-${++sequence}`; trees.set(sha, body.tree); payload = {sha}; }
+  else if (url.endsWith('/git/commits') && method === 'POST') { pendingTree = body.tree; payload = {sha:`commit-${++sequence}`}; }
+  else if (url.includes('/git/commits/')) payload = {tree:{sha:'BASE_TREE'}};
+  else if (url.includes('/git/ref/heads/')) payload = {object:{sha:'HEAD_SHA'}};
+  else if (url.includes('/git/refs/heads/')) {
+   if (rejectRef) { await route.fulfill({status:422, contentType:'application/json', body:JSON.stringify({message:'Not a fast forward'})}); return; }
+   const entry = trees.get(pendingTree).find(item=>item.path==='catalog/settings.json');
+   settingsSha = entry.sha; settings = JSON.parse(blobs.get(entry.sha)); payload = {object:{sha:body.sha}};
+  } else payload = {permissions:{push:true}};
   await route.fulfill({ contentType: 'application/json', body: JSON.stringify(payload) });
  });
  await page.goto(base);
+ assert.equal(page.url(), base);
+ assert.equal(await page.title(), 'zynthec App-Verwaltung');
+ assert.ok(await page.getByRole('heading', {name:'Apps verwalten.'}).isVisible(), 'Meaningful login screen must render');
  await page.screenshot({ path: `${screenshots}/login-light.png`, fullPage: true, animations: "disabled" });
  await page.locator('#appearance').selectOption('dark');
  await page.screenshot({ path: `${screenshots}/login-dark.png`, fullPage: true, animations: "disabled" });
@@ -45,21 +61,71 @@ try {
  await page.locator('#token').fill('TEST_ONLY_NO_CREDENTIAL');
  await page.locator('#connect').click();
  await page.locator('#dashboard:not(.hidden)').waitFor();
+ assert.equal(await page.locator('#sourceName').innerText(), 'zynthec-altstore-source');
  assert.match(await page.locator('.admin-item').first().innerText(), /Another App/);
  await page.screenshot({ path: `${screenshots}/dashboard-dark.png`, fullPage: true, animations: "disabled" });
  await page.locator('.admin-item').first().press('Enter');
- await page.locator('input[name="name"]').fill('');
+ await page.locator('#editorForm input[name="name"]').fill('');
  await page.getByRole('button', { name: 'Abbrechen', exact: true }).click();
  assert.equal(await page.locator('#editor').evaluate(e => e.open), false);
  assert.equal(mutations.length, 0, 'Cancel must not submit changes');
+ await page.locator('#editSource').click();
+ await page.locator('#sourceForm input[name="name"]').fill('Nicht speichern');
+ await page.locator('#cancelSource').click();
+ assert.equal(mutations.length, 0, 'Cancelling source settings must not write');
+ await page.locator('#editSource').click();
+ await page.locator('#sourceForm input[name="icon"]').setInputFiles({name:'invalid.png', mimeType:'image/png', buffer:Buffer.from('not a png')});
+ await page.getByRole('button', {name:'Source speichern', exact:true}).click();
+ await page.getByText('Bitte ein gültiges PNG-Bild auswählen.').waitFor();
+ assert.equal(mutations.length, 0, 'Invalid icons must be rejected before any write');
+ await page.locator('#cancelSource').click();
+ await page.locator('#editSource').click();
+ remoteSettingsChanged = true;
+ await page.getByRole('button', {name:'Source speichern', exact:true}).click();
+ await page.getByText(/Die Source wurde inzwischen geändert/).waitFor();
+ assert.equal(mutations.length, 0, 'Changed source settings must not be overwritten');
+ remoteSettingsChanged = false;
+ await page.locator('#cancelSource').click();
+ await page.locator('#editSource').click();
+ await page.locator('#sourceForm input[name="name"]').fill('Meine Source');
+ await page.locator('#sourceForm input[name="subtitle"]').fill('Eigene Apps');
+ await page.locator('#sourceForm textarea[name="description"]').fill('Meine neue Beschreibung');
+ await page.locator('#sourceForm input[name="tintColor"]').fill('#123456');
+ const png = await readFile(new URL('../icon.png', import.meta.url));
+ await page.locator('#sourceForm input[name="icon"]').setInputFiles({name:'icon.png', mimeType:'image/png', buffer:png});
+ await page.screenshot({path:`${screenshots}/source-settings-desktop.png`, fullPage:true, animations:'disabled'});
+ await page.getByRole('button', {name:'Source speichern', exact:true}).click();
+ await page.locator('#sourceEditor').waitFor({state:'hidden'});
+ assert.equal(await page.locator('#sourceName').innerText(), 'Meine Source');
+ assert.equal(settings.description, 'Meine neue Beschreibung');
+ assert.equal(settings.tintColor, '#123456');
+ assert.equal(settings.identifier, 'com.zynthec.source');
+ assert.equal(settings.githubRepository, 'zynthec-dev/zynthec-altstore-source');
+ assert.equal(settings.sourceURL, 'https://altsource.zynthec.com');
+ const sourceTree = mutations.find(item=>item.url.endsWith('/git/trees'));
+ assert.deepEqual(JSON.parse(sourceTree.body).tree.map(item=>item.path), ['catalog/settings.json','icon.png']);
+ assert.equal(JSON.parse(mutations.find(item=>item.url.includes('/git/refs/heads/')).body).force, false);
+ await page.locator('#editSource').click();
+ assert.equal(await page.locator('#sourceForm input[name="name"]').inputValue(), 'Meine Source');
+ rejectRef = true;
+ await page.locator('#sourceForm input[name="name"]').fill('Nicht überschreiben');
+ await page.getByRole('button', {name:'Source speichern', exact:true}).click();
+ await page.getByText(/Inzwischen wurde eine andere Änderung gespeichert/).waitFor();
+ assert.equal(await page.locator('#sourceName').innerText(), 'Meine Source');
+ rejectRef = false;
+ await page.locator('#cancelSource').click();
  await page.locator('.admin-item').first().click();
- assert.equal(await page.locator('input[name="name"]').inputValue(), 'Another App');
+ assert.equal(await page.locator('#editorForm input[name="name"]').inputValue(), 'Another App');
  await page.getByRole('button', { name: 'Schließen', exact: true }).click();
  await page.locator('#appearance').selectOption('light');
  await page.screenshot({ path: `${screenshots}/dashboard-light.png`, fullPage: true, animations: "disabled" });
  await page.setViewportSize({ width: 390, height: 844 });
  await page.screenshot({ path: `${screenshots}/mobile-light.png`, fullPage: true, animations: "disabled" });
  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No horizontal overflow');
+ await page.locator('#editSource').click();
+ await page.screenshot({path:`${screenshots}/source-settings-mobile.png`, fullPage:true, animations:'disabled'});
+ assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Source settings must fit mobile');
+ await page.locator('#cancelSource').click();
  await page.locator('.admin-item').first().click();
  await page.screenshot({ path: `${screenshots}/editor-mobile.png`, fullPage: true, animations: "disabled" });
  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -67,13 +133,13 @@ try {
  assert.equal(await page.locator('.primary-button').first().evaluate(e => getComputedStyle(e).transitionDuration), '0s');
  await page.getByRole('button', { name: 'Schließen', exact: true }).click();
  await page.getByRole('button', { name: 'App hochladen' }).click();
- await page.locator('input[name="name"]').fill('Demo App');
- await page.locator('input[name="marketingVersion"]').fill('1.0');
- await page.locator('textarea[name="versionDescription"]').fill('Erste Testversion');
- await page.locator('input[name="ipa"]').setInputFiles({ name: 'Demo-1.0.ipa', mimeType: 'application/octet-stream', buffer: Buffer.from('test ipa') });
- await page.getByRole('button', { name: 'Speichern' }).click();
- await page.getByText('Veröffentlichung läuft').waitFor();
- const blob = mutations.find(item => item.url.endsWith('/git/blobs'));
+ await page.locator('#editorForm input[name="name"]').fill('Demo App');
+ await page.locator('#editorForm input[name="marketingVersion"]').fill('1.0');
+ await page.locator('#editorForm textarea[name="versionDescription"]').fill('Erste Testversion');
+ await page.locator('#editorForm input[name="ipa"]').setInputFiles({ name: 'Demo-1.0.ipa', mimeType: 'application/octet-stream', buffer: Buffer.from('test ipa') });
+ await page.getByRole('button', { name: 'Speichern', exact: true }).click();
+ await page.locator('#appsList .pin-label').getByText('Veröffentlichung läuft', {exact:true}).waitFor();
+ const blob = mutations.filter(item => item.url.endsWith('/git/blobs')).at(-1);
  assert.equal(blob.method, 'POST');
  assert.equal(JSON.parse(blob.body).encoding, 'base64');
  const saved = mutations.find(item => item.method === 'PUT' && item.url.includes('/contents/catalog/content.json'));
@@ -81,7 +147,10 @@ try {
  assert.equal(staged.name, 'Demo App');
  assert.equal(staged.versionDescription, 'Erste Testversion');
  assert.match(staged.releaseTag, /^app-demo-app-v1-0-\d{8}T\d{6}Z-[a-f0-9]{8}$/);
- assert.equal(staged.pendingUpload.sha, 'a'.repeat(40));
+ assert.ok(blobs.has(staged.pendingUpload.sha));
+ assert.deepEqual(blobs.get(staged.pendingUpload.sha), Buffer.from('test ipa'));
  assert.deepEqual(errors, []);
- console.log('PASS: app ordering, editor, staged browser IPA upload, versioned tag, theme, mobile layout and browser errors');
+ assert.equal(consoleErrors.length, 1, 'Only the deliberately simulated GitHub conflict may appear in the console');
+ assert.match(consoleErrors[0], /status of 422/);
+ console.log('PASS: source settings, atomic icon save, conflicts, invalid PNG, cancel, app ordering, staged IPA upload, theme, desktop/mobile and browser errors');
 } finally { await browser.close(); }

@@ -19,6 +19,14 @@ summary { cursor:pointer; padding:10px 0; }
 .dashboard-title { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:32px; }
 .dashboard-title>div>p:last-child { max-width:540px; }
 .admin-list { display:grid; gap:12px; }
+.source-card { display:flex; align-items:center; gap:20px; padding:24px; border-radius:24px; margin-bottom:36px; }
+.source-card>img { flex:none; border-radius:16px; object-fit:cover; }
+.source-copy { flex:1; min-width:0; }
+.source-copy h2 { margin:0; font-size:21px; overflow-wrap:anywhere; }
+.source-copy>p:not(.eyebrow) { color:var(--muted); font-size:14px; line-height:1.5; margin:8px 0; overflow-wrap:anywhere; }
+.source-color { display:inline-block; width:14px; height:14px; border-radius:50%; border:1px solid var(--line); }
+.source-icon-preview { display:block; width:80px; height:80px; object-fit:cover; border-radius:18px; margin:12px 0; }
+button:disabled { opacity:.55; cursor:wait; }
 .admin-item { width:100%; text-align:left; font:inherit; color:var(--text); border:1px solid var(--line); background:var(--surface); border-radius:20px; padding:18px 20px; display:flex; align-items:center; gap:16px; cursor:pointer; transition:border-color .16s; }
 .admin-item:hover { background:var(--accent-soft); border-color:var(--accent); }
 .admin-item-mark { flex:none; width:52px; height:52px; display:grid; place-items:center; border-radius:14px; background:var(--accent-soft); color:var(--accent); font-weight:650; font-size:13px; }
@@ -40,6 +48,8 @@ summary { cursor:pointer; padding:10px 0; }
   .appearance>span { display:none; }
   .login { padding:26px; }
   .dashboard-title { align-items:stretch; flex-direction:column; gap:12px; }
+  .source-card { flex-wrap:wrap; gap:14px; padding:20px; }
+  .source-card>button { width:100%; }
   .editor-body { padding:24px; }
   .editor-actions { display:grid; grid-template-columns:1fr 1fr; }
   .editor-actions span { display:none; }

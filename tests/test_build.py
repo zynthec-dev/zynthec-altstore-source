@@ -1,9 +1,12 @@
 import importlib.util
 import json
+import shutil
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 from urllib.parse import unquote, urlparse
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
@@ -16,6 +19,7 @@ class BuildTests(unittest.TestCase):
             subprocess.run(["python3", "scripts/build.py"], cwd=ROOT, check=True)
         cls.source = json.loads((DIST / "source.json").read_text())
         cls.content = json.loads((ROOT / "catalog/content.json").read_text())
+        cls.settings = json.loads((ROOT / "catalog/settings.json").read_text())
 
     def test_source_contains_only_catalogued_ipas(self):
         selected = {
@@ -64,13 +68,36 @@ class BuildTests(unittest.TestCase):
         self.assertTrue(all("_origin" not in app for app in self.source["apps"]))
 
     def test_public_source_uses_canonical_domain_root(self):
-        self.assertEqual(self.source["name"], "zynthec-altstore-source")
+        for key in ("name", "subtitle", "description", "tintColor"):
+            self.assertEqual(self.source[key], self.settings[key])
         self.assertEqual(self.source["identifier"], "com.zynthec.source")
         self.assertEqual(self.source["website"], "https://altsource.zynthec.com")
         self.assertEqual(self.source["sourceURL"], "https://altsource.zynthec.com")
         self.assertNotIn("source.json", self.source["sourceURL"])
         self.assertEqual(self.source["iconURL"], "https://altsource.zynthec.com/assets/source-icon.png")
         self.assertTrue(all(app["iconURL"].startswith("https://altsource.zynthec.com/") for app in self.source["apps"]))
+
+    def test_custom_source_settings_and_icon_reach_feed_and_admin(self):
+        spec = importlib.util.spec_from_file_location("source_settings_build", ROOT / "scripts/build.py")
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        settings = {**self.settings, "name": "Meine Source <&>", "subtitle": "Eigene Apps",
+                    "description": "Eine neue Beschreibung", "tintColor": "#123456"}
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "catalog").mkdir()
+            (root / "catalog/settings.json").write_text(json.dumps(settings))
+            (root / "catalog/content.json").write_text(json.dumps({"localApps": {}, "uploadedApps": []}))
+            shutil.copytree(ROOT / "site", root / "site")
+            icon = b"test source icon"
+            (root / "icon.png").write_bytes(icon)
+            with patch.object(builder, "ROOT", root), patch.object(builder, "CATALOG", root / "catalog"), patch.object(builder, "DIST", root / "dist"):
+                builder.build()
+            feed = json.loads((root / "dist/source.json").read_text())
+            for key in ("name", "subtitle", "description", "tintColor", "identifier", "sourceURL"):
+                self.assertEqual(feed[key], settings[key])
+            self.assertEqual((root / "dist/assets/source-icon.png").read_bytes(), icon)
+            self.assertIn("Meine Source &lt;&amp;&gt;", (root / "dist/admin/index.html").read_text())
 
     def test_configured_apps_have_valid_release_filenames(self):
         apps = [*self.content.get("localApps", {}).values(), *self.content.get("uploadedApps", [])]

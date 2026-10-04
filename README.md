@@ -51,6 +51,8 @@ Die App-Verwaltung ermöglicht:
 - Namen, Versionstexte, Beschreibungen und Farben zu ändern,
 - eigene Icons und Screenshot-URLs zu hinterlegen.
 
+Über **Source-Einstellungen** lassen sich Anzeigename, Kurzbeschreibung, Beschreibung, Akzentfarbe und das Source-Icon (PNG, maximal 2 MB) ändern. Einstellungen und Icon werden gemeinsam in einem Commit gespeichert und anschließend automatisch durch Cloudflare veröffentlicht. Die Source-URL, Kennung und Repository-Verbindung bleiben erhalten. Bei zwischenzeitlichen Änderungen wird das Speichern abgebrochen, damit keine fremden Änderungen überschrieben werden.
+
 ## Deployment
 
 Cloudflare Pages ist direkt mit `zynthec-dev/zynthec-altstore-source` verbunden. Jeder Push auf `main` baut und testet die Source und veröffentlicht den erfolgreichen Build. Der Download öffentlicher IPA-Releases funktioniert ohne GitHub-Token oder GitHub CLI im Cloudflare-Build.

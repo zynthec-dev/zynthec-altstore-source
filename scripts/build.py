@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import html
 import json
 import os
 import plistlib
@@ -150,6 +151,8 @@ def build() -> None:
     if DIST.exists():
         shutil.rmtree(DIST)
     shutil.copytree(ROOT / "site", DIST)
+    admin_page = DIST / "admin" / "index.html"
+    admin_page.write_text(admin_page.read_text(encoding="utf-8").replace("{{SOURCE_NAME}}", html.escape(settings["name"])), encoding="utf-8")
     (DIST / "assets").mkdir(parents=True, exist_ok=True)
     shutil.copy2(ROOT / "icon.png", DIST / "assets" / "source-icon.png")
     # Only catalogued files are published; ignored local IPAs and old releases stay private to this build.

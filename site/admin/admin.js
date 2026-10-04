@@ -5,7 +5,13 @@ const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, character =>
 
 const REPOSITORY = "zynthec-dev/zynthec-altstore-source";
 const BRANCH = "main";
-const state = { token: "", content: null, file: null, edit: null };
+const state = { token: "", content: null, file: null, edit: null, settings: null, settingsFile: null, sourceSaving: false, iconPreview: null, sourceDraftPreview: null };
+const sourceFields = [
+  ["name", "Anzeigename", "text"],
+  ["subtitle", "Kurzbeschreibung", "text"],
+  ["description", "Beschreibung", "textarea"],
+  ["tintColor", "Akzentfarbe", "color"]
+];
 const editableFields = [
   ["name", "App-Name", "text"],
   ["developerName", "Entwickler", "text"],
@@ -58,11 +64,87 @@ function encodeJSON(data) {
 }
 
 async function load() {
-  state.file = await api(`/contents/catalog/content.json?ref=${encodeURIComponent(BRANCH)}`);
+  [state.file, state.settingsFile] = await Promise.all([
+    api(`/contents/catalog/content.json?ref=${encodeURIComponent(BRANCH)}`),
+    api(`/contents/catalog/settings.json?ref=${encodeURIComponent(BRANCH)}`)
+  ]);
   state.content = decode(state.file.content);
+  state.settings = decode(state.settingsFile.content);
   state.content.localApps ||= {};
   state.content.uploadedApps ||= [];
   render();
+  renderSource();
+}
+
+function renderSource(iconURL = state.settings.iconURL) {
+  $("#sourceName").textContent = state.settings.name;
+  $("#brandName").textContent = state.settings.name;
+  $("#sourceSubtitle").textContent = state.settings.subtitle || state.settings.description || "";
+  $("#sourceColor").style.backgroundColor = state.settings.tintColor;
+  $("#sourceColor").title = state.settings.tintColor;
+  $("#sourceIcon").src = iconURL;
+  $("#brandIcon").src = iconURL;
+}
+
+function openSourceEditor() {
+  $("#sourceFields").innerHTML = sourceFields.map(args => field(state.settings, ...args)).join("");
+  $("#sourceForm").reset();
+  $("#sourceIconPreview").src = $("#sourceIcon").src;
+  $("#sourceStatus").textContent = "";
+  $("#sourceEditor").showModal();
+}
+
+async function saveSource() {
+  if (state.sourceSaving) return;
+  const form = new FormData($("#sourceForm"));
+  const settings = structuredClone(state.settings);
+  for (const [key] of sourceFields) settings[key] = String(form.get(key) || "").trim();
+  const icon = form.get("icon");
+  state.sourceSaving = true;
+  $("#sourceForm").querySelectorAll("button, input, textarea").forEach(element => { element.disabled = true; });
+  $("#sourceStatus").textContent = "Source wird gespeichert …";
+  try {
+    if (!settings.name) throw new Error("Bitte einen Anzeigenamen eingeben.");
+    if (!/^#[0-9a-f]{6}$/i.test(settings.tintColor)) throw new Error("Bitte eine gültige Akzentfarbe auswählen.");
+    let iconBytes;
+    if (icon?.size) {
+      if (icon.size > 2_000_000) throw new Error("Das Source-Icon darf maximal 2 MB groß sein.");
+      iconBytes = new Uint8Array(await icon.arrayBuffer());
+      if (![137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => iconBytes[index] === byte)) throw new Error("Bitte ein gültiges PNG-Bild auswählen.");
+      try { const image = await createImageBitmap(icon); image.close(); }
+      catch { throw new Error("Das PNG-Bild konnte nicht gelesen werden."); }
+    }
+    // Use one commit for settings and icon so deployment never sees a partial update.
+    const head = await api(`/git/ref/heads/${BRANCH}`);
+    const latest = await api(`/contents/catalog/settings.json?ref=${head.object.sha}`);
+    if (latest.sha !== state.settingsFile.sha) throw new Error("Die Source wurde inzwischen geändert. Bitte neu laden und deine Änderungen erneut eingeben.");
+    const parent = await api(`/git/commits/${head.object.sha}`);
+    const settingsBlob = await api("/git/blobs", { method: "POST", body: JSON.stringify({ content: encodeJSON(settings), encoding: "base64" }) });
+    const tree = [{ path: "catalog/settings.json", mode: "100644", type: "blob", sha: settingsBlob.sha }];
+    if (iconBytes) {
+      const blob = await api("/git/blobs", { method: "POST", body: JSON.stringify({ content: encodeBytes(iconBytes), encoding: "base64" }) });
+      tree.push({ path: "icon.png", mode: "100644", type: "blob", sha: blob.sha });
+    }
+    const createdTree = await api("/git/trees", { method: "POST", body: JSON.stringify({ base_tree: parent.tree.sha, tree }) });
+    const commit = await api("/git/commits", { method: "POST", body: JSON.stringify({ message: "admin: update source settings", tree: createdTree.sha, parents: [head.object.sha] }) });
+    await api(`/git/refs/heads/${BRANCH}`, { method: "PATCH", body: JSON.stringify({ sha: commit.sha, force: false }) });
+    state.settings = settings;
+    state.settingsFile.sha = settingsBlob.sha;
+    if (iconBytes) {
+      if (state.iconPreview) URL.revokeObjectURL(state.iconPreview);
+      state.iconPreview = URL.createObjectURL(icon);
+    }
+    renderSource(state.iconPreview || settings.iconURL);
+    $("#sourceEditor").close();
+    toast("Source gespeichert – Veröffentlichung läuft");
+  } catch (error) {
+    $("#sourceStatus").textContent = error.status === 409 || error.status === 422
+      ? "Inzwischen wurde eine andere Änderung gespeichert. Bitte neu laden und erneut versuchen."
+      : error.message;
+  } finally {
+    state.sourceSaving = false;
+    $("#sourceForm").querySelectorAll("button, input, textarea").forEach(element => { element.disabled = false; });
+  }
 }
 
 function records() {
@@ -234,10 +316,24 @@ $("#connect").onclick = async () => {
 
 $("#logout").onclick = () => { sessionStorage.removeItem("zynthecAdmin"); location.reload(); };
 $("#addApp").onclick = () => openEditor();
+$("#editSource").onclick = openSourceEditor;
+$("#sourceForm").addEventListener("submit", event => { event.preventDefault(); saveSource(); });
+$("#cancelSource").onclick = () => $("#sourceEditor").close();
+$("#sourceEditor").addEventListener("cancel", event => { if (state.sourceSaving) event.preventDefault(); });
+$("#sourceForm input[name='icon']").addEventListener("change", event => {
+  if (state.sourceDraftPreview) URL.revokeObjectURL(state.sourceDraftPreview);
+  const file = event.target.files[0];
+  state.sourceDraftPreview = file ? URL.createObjectURL(file) : null;
+  $("#sourceIconPreview").src = state.sourceDraftPreview || $("#sourceIcon").src;
+});
+$("#sourceEditor").addEventListener("close", () => {
+  if (state.sourceDraftPreview) URL.revokeObjectURL(state.sourceDraftPreview);
+  state.sourceDraftPreview = null;
+});
 document.addEventListener("click", event => {
   const item = event.target.closest("[data-kind]");
   if (item) openEditor(item.dataset.kind, item.dataset.key);
-  if (event.target.closest(".dialog-close")) $("#editor").close();
+  if (event.target.closest(".dialog-close")) event.target.closest("dialog").close();
 });
 $("#editorForm").addEventListener("submit", event => { event.preventDefault(); if (event.submitter?.value === "cancel") { $("#editor").close(); return; } save(); });
 $("#deleteItem").onclick = remove;
