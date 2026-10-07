@@ -18,6 +18,25 @@
         "sha256": "f7170f3dc1db6f332ef00a2314078176d68d0e5f3fc4141fea46054855a83945",
         "updatedAt": "2026-10-07T09:12:00Z"
       }
+    },
+    "com.zynthec.zLoader": {
+      "ipaFile": "zLoader-0.7.25-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.25-20261007T155133Z-26e54cda",
+      "name": "zLoader",
+      "developerName": "zynthec-dev",
+      "subtitle": "Independent SideStore fork for iPhone and iPad.",
+      "localizedDescription": "Install, sign and refresh your apps. Includes the optional integrated local tunnel. Apple signing profiles must authorize the capabilities of the app and its extensions; an external local VPN tunnel can be used when the integrated tunnel is unavailable. Based on SideStore and AltStore. Corresponding source: https://github.com/zynthec-dev/zloader-app/tree/60a359ef790f3c9500ae0536e8ce5f0bad2a0f80",
+      "category": "utilities",
+      "tintColor": "#147D60",
+      "iconFile": "catalog/assets/zloader-icon.png",
+      "versionDescription": "Unified sideloading IPA with the embedded tunnel, native list backgrounds, removal of wallpapers and updated zLoader Source settings.",
+      "screenshots": [],
+      "marketingVersion": "0.7.25",
+      "releaseAsset": {
+        "size": 32020918,
+        "sha256": "26e54cdaa9ab1e9a0b08c56ea9a8d166cdb12f332d5aecdee3b7c6b96b4caa55",
+        "updatedAt": "2026-10-07T15:51:48.382400Z"
+      }
     }
   },
   "uploadedApps": [],
@@ -32,7 +51,8 @@
       "url": "https://zloader.zynthec.com"
     }
   ],
-  "excludedBundleIdentifiers": [
-    "com.zynthec.zloader"
+  "excludedBundleIdentifiers": [],
+  "pinnedBundleIdentifiers": [
+    "com.zynthec.zLoader"
   ]
 }

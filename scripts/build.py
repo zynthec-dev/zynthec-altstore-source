@@ -186,14 +186,20 @@ def build() -> None:
     for app in manual + local:
         if app["bundleIdentifier"] not in excluded:
             merged[app["bundleIdentifier"]] = app
-    apps = sorted(merged.values(), key=lambda app: app["name"].casefold())
+    pinned = content.get("pinnedBundleIdentifiers", [])
+    missing_pins = set(pinned) - set(merged)
+    if missing_pins:
+        raise ValueError("pinned apps missing from source: " + ", ".join(sorted(missing_pins)))
+    pin_order = {identifier: index for index, identifier in enumerate(pinned)}
+    apps = sorted(merged.values(), key=lambda app: (
+        pin_order.get(app["bundleIdentifier"], len(pinned)), app["name"].casefold()))
     feed_apps = [{key: value for key, value in app.items() if not key.startswith("_")} for app in apps]
     feed = {
         "name": settings["name"], "identifier": settings["identifier"],
         "subtitle": settings["subtitle"], "description": settings["description"],
         "sourceURL": settings["sourceURL"], "website": settings["website"],
         "iconURL": settings["iconURL"], "tintColor": settings["tintColor"],
-        "featuredApps": [],
+        "featuredApps": pinned,
         "apps": feed_apps, "news": content.get("news", [])
     }
     write_json(DIST / "source.json", feed)

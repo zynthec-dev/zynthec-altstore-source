@@ -58,7 +58,13 @@ class BuildTests(unittest.TestCase):
     def test_excluded_apps_are_not_published(self):
         identifiers = {app["bundleIdentifier"] for app in self.source["apps"]}
         self.assertFalse(identifiers.intersection(self.content.get("excludedBundleIdentifiers", [])))
-        self.assertEqual(self.source["featuredApps"], [])
+        self.assertEqual(self.source["featuredApps"], self.content.get("pinnedBundleIdentifiers", []))
+
+    def test_pinned_apps_are_first_and_updateable(self):
+        pinned = self.content.get("pinnedBundleIdentifiers", [])
+        self.assertEqual([app["bundleIdentifier"] for app in self.source["apps"][:len(pinned)]], pinned)
+        for app in self.source["apps"][:len(pinned)]:
+            self.assertEqual(app["versions"][0]["sha256"], self.content["localApps"][app["bundleIdentifier"]]["releaseAsset"]["sha256"])
 
     def test_apps_use_supported_categories(self):
         supported = {"developer", "entertainment", "games", "lifestyle", "other", "photo-video", "social", "utilities"}

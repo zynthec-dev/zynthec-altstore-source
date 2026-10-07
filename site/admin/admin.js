@@ -147,10 +147,14 @@ async function saveSource() {
   }
 }
 
+function isPinned(record) {
+  return record.kind === "local" && (state.content.pinnedBundleIdentifiers || []).includes(record.key);
+}
+
 function records() {
   const local = Object.entries(state.content.localApps).map(([key, app]) => ({ kind: "local", key, app }));
   const uploaded = state.content.uploadedApps.map((app, index) => ({ kind: "uploaded", key: index, app }));
-  return [...local, ...uploaded].sort((a, b) => (a.app.name || "").localeCompare(b.app.name || ""));
+  return [...local, ...uploaded].sort((a, b) => Number(isPinned(b)) - Number(isPinned(a)) || (a.app.name || "").localeCompare(b.app.name || ""));
 }
 
 function render() {
@@ -178,7 +182,7 @@ function openEditor(kind = "new", key = null) {
   $("#editorFields").innerHTML = `${editableFields.map(args => field(record.app, ...args)).join("")}
     <label class="field">${isNew ? "IPA-Datei" : "Neue IPA-Version (optional)"}<input name="ipa" type="file" accept=".ipa,application/octet-stream" ${isNew ? "required" : ""}><small>Bei jeder neuen IPA entsteht ein eigener Release-Tag mit dem Text aus „Neu in dieser Version“. Browser-Upload bis 70 MB.</small></label>
     <label class="field">${isNew ? "App-Icon als PNG (optional)" : "Neues App-Icon als PNG (optional)"}<input name="icon" type="file" accept="image/png"></label>`;
-  $("#deleteItem").classList.toggle("hidden", isNew);
+  $("#deleteItem").classList.toggle("hidden", isNew || isPinned(record));
   $("#editorStatus").textContent = "";
   $("#editor").showModal();
 }
@@ -276,6 +280,10 @@ async function save() {
 }
 
 async function remove() {
+  if (isPinned(state.edit)) {
+    $("#editorStatus").textContent = "zLoader bleibt dauerhaft in dieser Source. Eine neue IPA kann über diesen Eintrag hochgeladen werden.";
+    return;
+  }
   if (!confirm(`„${state.edit.app.name || "Diese App"}“ samt IPA wirklich entfernen?`)) return;
   $("#editorStatus").textContent = "App und IPA werden entfernt …";
   try {
