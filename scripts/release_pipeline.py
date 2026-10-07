@@ -154,6 +154,8 @@ def publish_pending(content: dict[str, Any], repo: str, default_tag: str, token:
                 )
             subprocess.run(["gh", "release", "upload", tag, str(path), "--repo", repo, "--clobber"], check=True)
         del app["pendingUpload"]
+        app["releaseAsset"] = {"size": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+                               "updatedAt": dt.datetime.now(dt.timezone.utc).isoformat()}
         changed = True
     if changed:
         CONTENT.write_text(json.dumps(content, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -163,6 +165,18 @@ def publish_pending(content: dict[str, Any], repo: str, default_tag: str, token:
 def download_selected(content: dict[str, Any], repo: str, default_tag: str) -> None:
     releases: dict[str, dict[str, Any]] = {}
     for tag, filename in selected_assets(content, default_tag):
+        app = next(app for _, app in apps(content)
+                   if app["ipaFile"] == filename and (app.get("releaseTag") or default_tag) == tag)
+        pinned = app.get("releaseAsset")
+        if pinned is not None:
+            if (type(pinned.get("size")) is not int or pinned["size"] <= 0
+                    or not re.fullmatch(r"[a-f0-9]{64}", pinned.get("sha256", ""))):
+                raise ValueError("Invalid pinned release asset metadata")
+            asset = {"name": filename, "size": pinned["size"],
+                     "digest": "sha256:" + pinned["sha256"], "updated_at": pinned["updatedAt"],
+                     "browser_download_url": f"https://github.com/{repo}/releases/download/{quote(tag, safe='')}/{quote(filename, safe='')}"}
+            download_asset(asset, ROOT / filename, tag)
+            continue
         if tag not in releases:
             request = urllib.request.Request(
                 f"https://api.github.com/repos/{repo}/releases/tags/{quote(tag, safe='')}",
@@ -173,20 +187,23 @@ def download_selected(content: dict[str, Any], repo: str, default_tag: str) -> N
         asset = next((item for item in releases[tag].get("assets", []) if item["name"] == filename), None)
         if asset is None:
             raise ValueError(f"Release asset not found: {tag}/{filename}")
-        destination = ROOT / filename
-        request = urllib.request.Request(asset["browser_download_url"], headers={"User-Agent": "zynthec-altstore-source"})
-        with urllib.request.urlopen(request, timeout=120) as response, destination.open("wb") as output:
-            shutil.copyfileobj(response, output)
-        if destination.stat().st_size != asset["size"]:
-            raise ValueError(f"Release asset size mismatch: {tag}/{filename}")
-        digest = asset.get("digest")
-        if digest and digest.startswith("sha256:"):
-            actual_digest = hashlib.sha256(destination.read_bytes()).hexdigest()
-            if actual_digest != digest.removeprefix("sha256:"):
-                raise ValueError(f"Release asset checksum mismatch: {tag}/{filename}")
-        if asset.get("updated_at"):
-            timestamp = dt.datetime.fromisoformat(asset["updated_at"].replace("Z", "+00:00")).timestamp()
-            os.utime(destination, (timestamp, timestamp))
+        download_asset(asset, ROOT / filename, tag)
+
+
+def download_asset(asset: dict[str, Any], destination: Path, tag: str) -> None:
+    request = urllib.request.Request(asset["browser_download_url"], headers={"User-Agent": "zynthec-altstore-source"})
+    with urllib.request.urlopen(request, timeout=120) as response, destination.open("wb") as output:
+        shutil.copyfileobj(response, output)
+    if destination.stat().st_size != asset["size"]:
+        raise ValueError(f"Release asset size mismatch: {tag}/{destination.name}")
+    digest = asset.get("digest")
+    if digest and digest.startswith("sha256:"):
+        actual_digest = hashlib.sha256(destination.read_bytes()).hexdigest()
+        if actual_digest != digest.removeprefix("sha256:"):
+            raise ValueError(f"Release asset checksum mismatch: {tag}/{destination.name}")
+    if asset.get("updated_at"):
+        timestamp = dt.datetime.fromisoformat(asset["updated_at"].replace("Z", "+00:00")).timestamp()
+        os.utime(destination, (timestamp, timestamp))
 
 
 def new_release_tag(name: str, version: str) -> str:
@@ -221,7 +238,9 @@ def publish_url_file(content: dict[str, Any], repo: str, path: Path, name: str, 
         app = {"bundleIdentifier": bundle_id, "developerName": "zynthec", "category": "other", "screenshots": []}
         content.setdefault("uploadedApps", []).append(app)
     app.update({"name": name, "marketingVersion": version, "versionDescription": notes,
-                "ipaFile": path.name, "releaseTag": tag})
+                "ipaFile": path.name, "releaseTag": tag,
+                "releaseAsset": {"size": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+                                 "updatedAt": dt.datetime.now(dt.timezone.utc).isoformat()}})
     CONTENT.write_text(json.dumps(content, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return tag
 

@@ -12,7 +12,12 @@
       "iconFile": "catalog/assets/mipet-icon.png",
       "versionDescription": "IPA neu verpackt: macOS-Metadatendateien entfernt, damit SideStore und AltStore das richtige App-Bundle erkennen. App-Version unverändert.",
       "screenshots": [],
-      "marketingVersion": "0.3-beta"
+      "marketingVersion": "0.3-beta",
+      "releaseAsset": {
+        "size": 14867113,
+        "sha256": "f7170f3dc1db6f332ef00a2314078176d68d0e5f3fc4141fea46054855a83945",
+        "updatedAt": "2026-10-07T09:12:00Z"
+      }
     }
   },
   "uploadedApps": [],

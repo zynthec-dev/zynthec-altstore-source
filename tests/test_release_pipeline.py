@@ -82,6 +82,20 @@ class ReleasePipelineTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "checksum mismatch"):
                 pipeline.download_selected({"localApps": {"de.renewitt.mipet": {"ipaFile": "miPet.ipa"}}}, "owner/repo", "apps")
 
+    def test_pinned_download_needs_no_rate_limited_github_api(self):
+        data = test_ipa()
+        app = {"ipaFile": "miPet.ipa", "releaseAsset": {
+            "size": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+            "updatedAt": "2026-10-07T09:12:00Z"}}
+        with tempfile.TemporaryDirectory() as folder, patch.object(pipeline, "ROOT", Path(folder)), patch.object(
+            pipeline.urllib.request, "urlopen", return_value=io.BytesIO(data)
+        ) as fetch:
+            pipeline.download_selected({"localApps": {"de.renewitt.mipet": app}}, "owner/repo", "apps")
+            self.assertEqual((Path(folder) / "miPet.ipa").read_bytes(), data)
+            fetch.assert_called_once()
+            self.assertEqual(fetch.call_args.args[0].full_url,
+                             "https://github.com/owner/repo/releases/download/apps/miPet.ipa")
+
     def test_staged_upload_creates_release_and_preserves_change_notes(self):
         data = test_ipa()
         sha = hashlib.sha1(f"blob {len(data)}\0".encode() + data).hexdigest()
