@@ -101,6 +101,26 @@ def ipa_bundle_id(data: bytes) -> str:
     return info["CFBundleIdentifier"]
 
 
+def normalize_ipa(data: bytes) -> bytes:
+    """Remove Finder metadata which sideloaders can mistake for app bundles."""
+    def metadata(name: str) -> bool:
+        return any(part == "__MACOSX" or part == ".DS_Store" or part.startswith("._")
+                   for part in name.split("/"))
+
+    with zipfile.ZipFile(io.BytesIO(data)) as source:
+        if not any(metadata(entry.filename) for entry in source.infolist()):
+            return data
+        output = io.BytesIO()
+        with zipfile.ZipFile(output, "w") as target:
+            target.comment = source.comment
+            for entry in source.infolist():
+                if not metadata(entry.filename):
+                    # Keep compression, permissions (including executable bits),
+                    # symlink attributes and every actual app file unchanged.
+                    target.writestr(entry, source.read(entry))
+    return output.getvalue()
+
+
 def publish_pending(content: dict[str, Any], repo: str, default_tag: str, token: str) -> bool:
     changed = False
     for bundle_id, app in apps(content):
@@ -110,6 +130,7 @@ def publish_pending(content: dict[str, Any], repo: str, default_tag: str, token:
         data = fetch_blob(repo, sha, token)
         if len(data) != size:
             raise ValueError(f"Staged IPA size mismatch: {filename}")
+        data = normalize_ipa(data)
         embedded_bundle_id = ipa_bundle_id(data)
         if bundle_id is not None and embedded_bundle_id != bundle_id:
             raise ValueError(f"IPA bundle ID does not match catalog entry: {filename}")
@@ -180,9 +201,13 @@ def publish_url_file(content: dict[str, Any], repo: str, path: Path, name: str, 
         raise ValueError("The IPA filename is invalid")
     if not name.strip() or not version.strip() or not notes.strip():
         raise ValueError("App name, version and change notes are required")
-    bundle_id = ipa_bundle_id(path.read_bytes())
+    original = path.read_bytes()
+    data = normalize_ipa(original)
+    bundle_id = ipa_bundle_id(data)
     if bundle_id in content.get("excludedBundleIdentifiers", []):
         raise ValueError(f"Excluded app cannot be uploaded: {bundle_id}")
+    if data != original:
+        path.write_bytes(data)
     tag = new_release_tag(name, version)
     subprocess.run(
         ["gh", "release", "create", tag, "--repo", repo, "--title", f"{name} {version}",

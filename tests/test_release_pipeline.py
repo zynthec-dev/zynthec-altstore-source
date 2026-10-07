@@ -25,8 +25,28 @@ def test_ipa(bundle_id="de.renewitt.mipet"):
 
 class ReleasePipelineTests(unittest.TestCase):
     def test_only_selected_release_assets_are_downloaded(self):
-        content = json.loads((ROOT / "catalog/content.json").read_text())
+        content = {"localApps": {"de.renewitt.mipet": {"ipaFile": "miPet-0.3-beta.ipa"}}}
         self.assertEqual(pipeline.selected_assets(content, "apps"), [("apps", "miPet-0.3-beta.ipa")])
+
+    def test_normalization_removes_fake_app_and_preserves_real_files(self):
+        stream = io.BytesIO(test_ipa())
+        executable = zipfile.ZipInfo("Payload/Test.app/Test")
+        executable.external_attr = 0o100755 << 16
+        with zipfile.ZipFile(stream, "a") as archive:
+            archive.writestr(executable, b"app executable")
+            archive.writestr("Payload/._Test.app", b"Finder metadata")
+            archive.writestr("Payload/Test.app/._Info.plist", b"Finder metadata")
+            archive.writestr("__MACOSX/Payload/._Test.app", b"Finder metadata")
+            archive.writestr("Payload/.DS_Store", b"Finder metadata")
+        original = stream.getvalue()
+        cleaned = pipeline.normalize_ipa(original)
+        with zipfile.ZipFile(io.BytesIO(original)) as source, zipfile.ZipFile(io.BytesIO(cleaned)) as target:
+            self.assertEqual(target.namelist(), ["Payload/Test.app/Info.plist", executable.filename])
+            for entry in target.infolist():
+                self.assertEqual(target.read(entry), source.read(entry.filename))
+                self.assertEqual(entry.external_attr, source.getinfo(entry.filename).external_attr)
+            self.assertIsNone(target.testzip())
+        self.assertEqual(pipeline.normalize_ipa(cleaned), cleaned)
 
     def test_tag_is_unique_and_valid(self):
         first = pipeline.new_release_tag("miPet", "0.4 beta")
