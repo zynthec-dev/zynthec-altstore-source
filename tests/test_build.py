@@ -71,11 +71,11 @@ class BuildTests(unittest.TestCase):
         for key in ("name", "subtitle", "description", "tintColor"):
             self.assertEqual(self.source[key], self.settings[key])
         self.assertEqual(self.source["identifier"], "com.zynthec.source")
-        self.assertEqual(self.source["website"], "https://altsource.zynthec.com")
-        self.assertEqual(self.source["sourceURL"], "https://altsource.zynthec.com")
+        self.assertEqual(self.source["website"], "https://zloader.zynthec.com")
+        self.assertEqual(self.source["sourceURL"], "https://zloader.zynthec.com")
         self.assertNotIn("source.json", self.source["sourceURL"])
-        self.assertEqual(self.source["iconURL"], "https://altsource.zynthec.com/assets/source-icon.png")
-        self.assertTrue(all(app["iconURL"].startswith("https://altsource.zynthec.com/") for app in self.source["apps"]))
+        self.assertEqual(self.source["iconURL"], "https://zloader.zynthec.com/assets/source-icon.png")
+        self.assertTrue(all(app["iconURL"].startswith("https://zloader.zynthec.com/") for app in self.source["apps"]))
 
     def test_custom_source_settings_and_icon_reach_feed_and_admin(self):
         spec = importlib.util.spec_from_file_location("source_settings_build", ROOT / "scripts/build.py")

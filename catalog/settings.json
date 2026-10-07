@@ -1,12 +1,12 @@
 {
-  "name": "zynthec-altstore-source",
+  "name": "zLoader Source",
   "identifier": "com.zynthec.source",
-  "subtitle": "iOS Apps von zynthec – direkt und übersichtlich.",
-  "description": "Die offizielle AltStore- und SideStore-Source für Apps von zynthec.",
-  "website": "https://altsource.zynthec.com",
-  "sourceURL": "https://altsource.zynthec.com",
-  "iconURL": "https://altsource.zynthec.com/assets/source-icon.png",
-  "tintColor": "#7045B8",
+  "subtitle": "Apps direkt über zLoader installieren und aktualisieren.",
+  "description": "Die zLoader Source für AltStore, SideStore und zLoader.",
+  "website": "https://zloader.zynthec.com",
+  "sourceURL": "https://zloader.zynthec.com",
+  "iconURL": "https://zloader.zynthec.com/assets/source-icon.png",
+  "tintColor": "#147D60",
   "githubRepository": "zynthec-dev/zynthec-altstore-source",
   "releaseTag": "apps"
 }
