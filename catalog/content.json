@@ -20,22 +20,22 @@
       }
     },
     "com.zynthec.zLoader": {
-      "ipaFile": "zLoader-0.7.29-resignable.ipa",
-      "releaseTag": "app-zloader-v0.7.29-20261007T190053Z-b2ab02a4",
+      "ipaFile": "zLoader-0.7.31-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.31-20261007T191441Z-4c22db84",
       "name": "zLoader",
       "developerName": "zynthec-dev",
       "subtitle": "Independent SideStore fork for iPhone and iPad.",
-      "localizedDescription": "Install, sign and refresh your apps. Includes the optional integrated local tunnel. Apple signing profiles must authorize the capabilities of the app and its extensions; an external local VPN tunnel can be used when the integrated tunnel is unavailable. Based on SideStore and AltStore. Corresponding source: https://github.com/zynthec-dev/zloader-app/tree/37454eb133ff8716aca65d31446356d64163cef8",
+      "localizedDescription": "Sideloading and manage apps, deveoloper profiles and much more in zynthec style.",
       "category": "utilities",
       "tintColor": "#147D60",
       "iconFile": "catalog/assets/zloader-icon.png",
-      "versionDescription": "Smaller, consistent tab bar symbols and restored accent-colored Profiles Management icon. Settings now falls back to an available symbol rather than showing a blank icon.",
+      "versionDescription": "Apple Account sign-only now uses installation identity remapping, team-specific bundle IDs and separate extension profiles. Includes pinned zLoader in All Apps, smaller tab bar icons and the Profiles Management symbol.",
       "screenshots": [],
-      "marketingVersion": "0.7.29",
+      "marketingVersion": "0.7.31",
       "releaseAsset": {
-        "size": 32115176,
-        "sha256": "b2ab02a46ce22659d9c064e750aba197b5de5ebfd67c0fcfb7c8a15670195d21",
-        "updatedAt": "2026-10-07T19:00:53.873036Z"
+        "size": 32116771,
+        "sha256": "4c22db84ca9c338de787081dc1198dc499a3a7696983f7225ab29a3edad24333",
+        "updatedAt": "2026-10-07T19:14:41.430961Z"
       }
     }
   },
