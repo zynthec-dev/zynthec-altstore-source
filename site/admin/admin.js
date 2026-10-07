@@ -159,7 +159,7 @@ function render() {
 }
 
 function defaultApp() {
-  return { name: "", developerName: "zynthec", subtitle: "", localizedDescription: "", category: "utilities", tintColor: "#7045B8", marketingVersion: "", versionDescription: "", screenshots: [], ipaFile: "" };
+  return { name: "", developerName: "zynthec", subtitle: "", localizedDescription: "", category: "utilities", tintColor: "#147D60", marketingVersion: "", versionDescription: "", screenshots: [], ipaFile: "" };
 }
 
 function field(app, key, label, type) {

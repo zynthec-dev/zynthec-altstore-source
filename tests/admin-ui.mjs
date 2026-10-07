@@ -26,10 +26,10 @@ try {
   'example.other': { name: 'Another App', ipaFile: 'Another.ipa', marketingVersion: '1.0' },
   'de.renewitt.mipet': { name: 'miPet', ipaFile: 'miPet-0.3-beta.ipa', marketingVersion: '0.3-beta' }
  }, uploadedApps: [] };
- let settings = { name:'zynthec-altstore-source', subtitle:'iOS Apps', description:'Offizielle Source', tintColor:'#7045B8', identifier:'com.zynthec.source', sourceURL:'https://altsource.zynthec.com', iconURL:'https://altsource.zynthec.com/assets/source-icon.png', githubRepository:'zynthec-dev/zynthec-altstore-source', releaseTag:'apps' };
+ let settings = { name:'zLoader Source', subtitle:'iOS Apps', description:'Offizielle Source', tintColor:'#147D60', identifier:'com.zynthec.source', sourceURL:'https://zloader.zynthec.com', iconURL:'https://zloader.zynthec.com/assets/source-icon.png', githubRepository:'zynthec-dev/zynthec-altstore-source', releaseTag:'apps' };
  let settingsSha = 'SETTINGS_SHA'; let remoteSettingsChanged = false; let rejectRef = false;
  const blobs = new Map(); const trees = new Map(); let sequence = 0; let pendingTree;
- await page.route('https://altsource.zynthec.com/assets/source-icon.png', route => route.fulfill({ contentType:'image/png', body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a4x8AAAAASUVORK5CYII=', 'base64') }));
+ await page.route('https://zloader.zynthec.com/assets/source-icon.png', route => route.fulfill({ contentType:'image/png', body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a4x8AAAAASUVORK5CYII=', 'base64') }));
  await page.route('https://api.github.com/**', async route => {
   const method = route.request().method(), url = route.request().url();
   const body = method !== 'GET' ? JSON.parse(route.request().postData() || '{}') : null;
@@ -61,7 +61,7 @@ try {
  await page.locator('#token').fill('TEST_ONLY_NO_CREDENTIAL');
  await page.locator('#connect').click();
  await page.locator('#dashboard:not(.hidden)').waitFor();
- assert.equal(await page.locator('#sourceName').innerText(), 'zynthec-altstore-source');
+ assert.equal(await page.locator('#sourceName').innerText(), 'zLoader Source');
  assert.match(await page.locator('.admin-item').first().innerText(), /Another App/);
  await page.screenshot({ path: `${screenshots}/dashboard-dark.png`, fullPage: true, animations: "disabled" });
  await page.locator('.admin-item').first().press('Enter');
@@ -101,7 +101,7 @@ try {
  assert.equal(settings.tintColor, '#123456');
  assert.equal(settings.identifier, 'com.zynthec.source');
  assert.equal(settings.githubRepository, 'zynthec-dev/zynthec-altstore-source');
- assert.equal(settings.sourceURL, 'https://altsource.zynthec.com');
+ assert.equal(settings.sourceURL, 'https://zloader.zynthec.com');
  const sourceTree = mutations.find(item=>item.url.endsWith('/git/trees'));
  assert.deepEqual(JSON.parse(sourceTree.body).tree.map(item=>item.path), ['catalog/settings.json','icon.png']);
  assert.equal(JSON.parse(mutations.find(item=>item.url.includes('/git/refs/heads/')).body).force, false);
