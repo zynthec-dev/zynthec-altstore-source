@@ -20,8 +20,8 @@
       }
     },
     "com.zynthec.zLoader": {
-      "ipaFile": "zLoader-0.7.34-resignable.ipa",
-      "releaseTag": "app-zloader-v0.7.34-20261007T201153Z-90b721b0",
+      "ipaFile": "zLoader-0.7.35-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.35-20261007T212008Z-379103e8",
       "name": "zLoader",
       "developerName": "zynthec-dev",
       "subtitle": "Independent SideStore fork for iPhone and iPad.",
@@ -29,13 +29,13 @@
       "category": "utilities",
       "tintColor": "#147D60",
       "iconFile": "catalog/assets/zloader-icon.png",
-      "versionDescription": "Renew managed profiles by ID to avoid duplicate-name errors. Confirm only requested capability changes.",
+      "versionDescription": "Reuse compatible existing profiles for refresh, update and signing, separately for host and extensions.",
       "screenshots": [],
-      "marketingVersion": "0.7.34",
+      "marketingVersion": "0.7.35",
       "releaseAsset": {
-        "size": 32137922,
-        "sha256": "90b721b0c62f31bfa4423ad09a6e3a347be96a94a90452d1a12f6cc4ec02d66b",
-        "updatedAt": "2026-10-07T20:11:53Z"
+        "size": 32139075,
+        "sha256": "379103e857b46f8e79ce43ca3bf70c5e077d62950984b5f590f52a6503334e2e",
+        "updatedAt": "2026-10-07T21:20:08Z"
       }
     }
   },
