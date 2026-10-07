@@ -20,22 +20,22 @@
       }
     },
     "com.zynthec.zLoader": {
-      "ipaFile": "zLoader-0.7.26-resignable.ipa",
-      "releaseTag": "app-zloader-v0.7.26-20261007T162424Z-4e1a47e1",
+      "ipaFile": "zLoader-0.7.27-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.27-20261007T180522Z-69afd18a",
       "name": "zLoader",
       "developerName": "zynthec-dev",
       "subtitle": "Independent SideStore fork for iPhone and iPad.",
-      "localizedDescription": "Install, sign and refresh your apps. Includes the optional integrated local tunnel. Apple signing profiles must authorize the capabilities of the app and its extensions; an external local VPN tunnel can be used when the integrated tunnel is unavailable. Based on SideStore and AltStore. Corresponding source: https://github.com/zynthec-dev/zloader-app/tree/993e3b8952bd041556ec53d4eecfe2279cb9b60e",
+      "localizedDescription": "Install, sign and refresh your apps. Includes the optional integrated local tunnel. Apple signing profiles must authorize the capabilities of the app and its extensions; an external local VPN tunnel can be used when the integrated tunnel is unavailable. Based on SideStore and AltStore. Corresponding source: https://github.com/zynthec-dev/zloader-app/tree/fc403915bfe194a2c59253369247c7de7a21227e",
       "category": "utilities",
       "tintColor": "#147D60",
       "iconFile": "catalog/assets/zloader-icon.png",
-      "versionDescription": "Green save controls for App ID capabilities and App Groups. Portal capability/name changes are checked against fresh Apple responses. Apple-account signing renews profiles separately for every app and extension.",
+      "versionDescription": "Accent-only customization with native Light/Dark text fields, consistent Settings row alignment and restored zLoader visibility in All Apps.",
       "screenshots": [],
-      "marketingVersion": "0.7.26",
+      "marketingVersion": "0.7.27",
       "releaseAsset": {
-        "size": 32025482,
-        "sha256": "4e1a47e165f5803dd6f114e5c588230fd8bb21e4c160574cd20687404d8f56db",
-        "updatedAt": "2026-10-07T16:24:24.662789Z"
+        "size": 32017749,
+        "sha256": "69afd18a9d2958a598199197dd6cd428ad0df39a15e720315ed49d12510f5634",
+        "updatedAt": "2026-10-07T18:05:22.643440Z"
       }
     }
   },
