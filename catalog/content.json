@@ -20,22 +20,22 @@
       }
     },
     "com.zynthec.zLoader": {
-      "ipaFile": "zLoader-0.7.28-resignable.ipa",
-      "releaseTag": "app-zloader-v0.7.28-20261007T184431Z-53eeb5ea",
+      "ipaFile": "zLoader-0.7.29-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.29-20261007T190053Z-b2ab02a4",
       "name": "zLoader",
       "developerName": "zynthec-dev",
       "subtitle": "Independent SideStore fork for iPhone and iPad.",
-      "localizedDescription": "Install, sign and refresh your apps. Includes the optional integrated local tunnel. Apple signing profiles must authorize the capabilities of the app and its extensions; an external local VPN tunnel can be used when the integrated tunnel is unavailable. Based on SideStore and AltStore. Corresponding source: https://github.com/zynthec-dev/zloader-app/tree/dc743071c982859d88a87e032041b42885a48e55",
+      "localizedDescription": "Install, sign and refresh your apps. Includes the optional integrated local tunnel. Apple signing profiles must authorize the capabilities of the app and its extensions; an external local VPN tunnel can be used when the integrated tunnel is unavailable. Based on SideStore and AltStore. Corresponding source: https://github.com/zynthec-dev/zloader-app/tree/37454eb133ff8716aca65d31446356d64163cef8",
       "category": "utilities",
       "tintColor": "#147D60",
       "iconFile": "catalog/assets/zloader-icon.png",
-      "versionDescription": "All Apps overview for every source, pinned zLoader source with drag-and-drop ordering, Wireless IPA Installer with local HTTPS trust and transfer progress, modern tab icons and Sign App screen corrections.",
+      "versionDescription": "Smaller, consistent tab bar symbols and restored accent-colored Profiles Management icon. Settings now falls back to an available symbol rather than showing a blank icon.",
       "screenshots": [],
-      "marketingVersion": "0.7.28",
+      "marketingVersion": "0.7.29",
       "releaseAsset": {
-        "size": 32113695,
-        "sha256": "53eeb5ea7b2b35575805b985853538bf9fd0f615a8a7904db586eee32afc5f9b",
-        "updatedAt": "2026-10-07T18:44:31.116382Z"
+        "size": 32115176,
+        "sha256": "b2ab02a46ce22659d9c064e750aba197b5de5ebfd67c0fcfb7c8a15670195d21",
+        "updatedAt": "2026-10-07T19:00:53.873036Z"
       }
     }
   },
