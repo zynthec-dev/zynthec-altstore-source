@@ -20,8 +20,8 @@
       }
     },
     "com.zynthec.zLoader": {
-      "ipaFile": "zLoader-0.7.32-resignable.ipa",
-      "releaseTag": "app-zloader-v0.7.32-20261007T192241Z-4f005c12",
+      "ipaFile": "zLoader-0.7.33-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.33-20261007T194849Z-fa53d475",
       "name": "zLoader",
       "developerName": "zynthec-dev",
       "subtitle": "Independent SideStore fork for iPhone and iPad.",
@@ -29,13 +29,13 @@
       "category": "utilities",
       "tintColor": "#147D60",
       "iconFile": "catalog/assets/zloader-icon.png",
-      "versionDescription": "Developer Portal bulk actions now stay visible above the tab bar. Select All enables Delete All or Revoke All with item count, confirmation, progress and retained failures.",
+      "versionDescription": "Capability requests submit only changed values. Apple errors identify the failing portal endpoint.",
       "screenshots": [],
-      "marketingVersion": "0.7.32",
+      "marketingVersion": "0.7.33",
       "releaseAsset": {
-        "size": 32123276,
-        "sha256": "4f005c120f3d0562eac51b40ac1984a1be22269faf31dadd8078a6d7ee6f54ef",
-        "updatedAt": "2026-10-07T19:22:41.327260Z"
+        "size": 32132724,
+        "sha256": "fa53d475814fd4826af167c5dfcc8ee7b716c45be1c6f57c08cc9ec04a9699a4",
+        "updatedAt": "2026-10-07T19:48:49Z"
       }
     }
   },
