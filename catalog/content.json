@@ -20,8 +20,8 @@
       }
     },
     "com.zynthec.zLoader": {
-      "ipaFile": "zLoader-0.7.41-resignable.ipa",
-      "releaseTag": "app-zloader-v0.7.41-20261008T043546Z-9e906059",
+      "ipaFile": "zLoader-0.7.42-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.42-20261008T050804Z-c99b5f9f",
       "name": "zLoader",
       "developerName": "zynthec-dev",
       "subtitle": "Independent SideStore fork for iPhone and iPad.",
@@ -29,13 +29,13 @@
       "category": "utilities",
       "tintColor": "#147D60",
       "iconFile": "catalog/assets/zloader-icon.png",
-      "versionDescription": "Capability Requests in App ID details opens the exact Apple Developer Portal entry for requesting access and checking approval status. Includes profile-authorized capability fallback and compatible profile reuse.",
+      "versionDescription": "Self-update moves to Home after package transfer and transport readiness while keeping background execution and the tunnel lease. Accent-colored circular refresh/install progress with percentages. Installing apps appear immediately as translucent previews in My Apps.",
       "screenshots": [],
-      "marketingVersion": "0.7.41",
+      "marketingVersion": "0.7.42",
       "releaseAsset": {
-        "size": 32313433,
-        "sha256": "9e90605940cd976d7106a99d43ea6a38071563e7e3c4d51cda4c074412ec697e",
-        "updatedAt": "2026-10-08T04:35:46Z"
+        "size": 32333146,
+        "sha256": "c99b5f9fac0fdd0ff843c3ba0a5e82b5a1bdb73beaffeb4e38f7fca480f4a9c0",
+        "updatedAt": "2026-10-08T05:08:04Z"
       }
     }
   },
