@@ -20,8 +20,8 @@
       }
     },
     "com.zynthec.zLoader": {
-      "ipaFile": "zLoader-0.7.43-resignable.ipa",
-      "releaseTag": "app-zloader-v0.7.43-20261008T061655Z-d16e1737",
+      "ipaFile": "zLoader-0.7.44-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.44-20261008T071522Z-7a2731d6",
       "name": "zLoader",
       "developerName": "zynthec-dev",
       "subtitle": "Independent SideStore fork for iPhone and iPad.",
@@ -29,13 +29,13 @@
       "category": "utilities",
       "tintColor": "#147D60",
       "iconFile": "catalog/assets/zloader-icon.png",
-      "versionDescription": "Remove the extra rotating refresh/install spinners. Keep accent-colored circular progress and percentages; Refresh All uses the actual overall refresh progress.",
+      "versionDescription": "Self-update exits only after device installation acknowledgement. Launch apps stopped and attach JIT before startup; automatic JIT is a per-app setting. Native Liquid Glass cards, light/dark material texture and a responsive My Apps launcher.",
       "screenshots": [],
-      "marketingVersion": "0.7.43",
+      "marketingVersion": "0.7.44",
       "releaseAsset": {
-        "size": 32334802,
-        "sha256": "d16e173714d992c28dbae2ea7951a9222e2eac20b6e711e0ff40d95b70bc8c45",
-        "updatedAt": "2026-10-08T06:16:55Z"
+        "size": 32389861,
+        "sha256": "7a2731d6ac4ba5abba346c5e8c2421829346337577216bed942d22fdd4d8c9c0",
+        "updatedAt": "2026-10-08T07:15:22Z"
       }
     }
   },
