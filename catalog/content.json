@@ -20,8 +20,8 @@
       }
     },
     "com.zynthec.zLoader": {
-      "ipaFile": "zLoader-0.7.38-resignable.ipa",
-      "releaseTag": "app-zloader-v0.7.38-20261007T225837Z-48eb0c35",
+      "ipaFile": "zLoader-0.7.39-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.39-20261008T015419Z-75ef516c",
       "name": "zLoader",
       "developerName": "zynthec-dev",
       "subtitle": "Independent SideStore fork for iPhone and iPad.",
@@ -29,13 +29,13 @@
       "category": "utilities",
       "tintColor": "#147D60",
       "iconFile": "catalog/assets/zloader-icon.png",
-      "versionDescription": "Self-Pairing shows localized manual instructions after the server is ready instead of opening Settings automatically.",
+      "versionDescription": "Editable signing and extension customization; IPA signing details; Developer Portal controls and App ID renaming; simplified Connection Settings; clearer refresh progress in light and dark mode.",
       "screenshots": [],
-      "marketingVersion": "0.7.38",
+      "marketingVersion": "0.7.39",
       "releaseAsset": {
-        "size": 32147562,
-        "sha256": "48eb0c3581cdb7d0e0cda25945ffb9584cadf745089f79158ed942ee5bc9d194",
-        "updatedAt": "2026-10-07T22:58:37Z"
+        "size": 32308115,
+        "sha256": "75ef516c4eeed9b27766af184f82d6b200e42c41c5ee2ee837517e036a3c7a8a",
+        "updatedAt": "2026-10-08T01:54:19Z"
       }
     }
   },
