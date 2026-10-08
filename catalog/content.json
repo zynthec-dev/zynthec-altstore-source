@@ -20,8 +20,8 @@
       }
     },
     "com.zynthec.zLoader": {
-      "ipaFile": "zLoader-0.7.42-resignable.ipa",
-      "releaseTag": "app-zloader-v0.7.42-20261008T050804Z-c99b5f9f",
+      "ipaFile": "zLoader-0.7.43-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.43-20261008T061655Z-d16e1737",
       "name": "zLoader",
       "developerName": "zynthec-dev",
       "subtitle": "Independent SideStore fork for iPhone and iPad.",
@@ -29,13 +29,13 @@
       "category": "utilities",
       "tintColor": "#147D60",
       "iconFile": "catalog/assets/zloader-icon.png",
-      "versionDescription": "Self-update moves to Home after package transfer and transport readiness while keeping background execution and the tunnel lease. Accent-colored circular refresh/install progress with percentages. Installing apps appear immediately as translucent previews in My Apps.",
+      "versionDescription": "Remove the extra rotating refresh/install spinners. Keep accent-colored circular progress and percentages; Refresh All uses the actual overall refresh progress.",
       "screenshots": [],
-      "marketingVersion": "0.7.42",
+      "marketingVersion": "0.7.43",
       "releaseAsset": {
-        "size": 32333146,
-        "sha256": "c99b5f9fac0fdd0ff843c3ba0a5e82b5a1bdb73beaffeb4e38f7fca480f4a9c0",
-        "updatedAt": "2026-10-08T05:08:04Z"
+        "size": 32334802,
+        "sha256": "d16e173714d992c28dbae2ea7951a9222e2eac20b6e711e0ff40d95b70bc8c45",
+        "updatedAt": "2026-10-08T06:16:55Z"
       }
     }
   },
