@@ -20,8 +20,8 @@
       }
     },
     "com.zynthec.zLoader": {
-      "ipaFile": "zLoader-0.7.47-resignable.ipa",
-      "releaseTag": "app-zloader-v0.7.47-20261008T080011Z-bd3ee602",
+      "ipaFile": "zLoader-0.7.48-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.48-20261008T081524Z-48e86c1e",
       "name": "zLoader",
       "developerName": "zynthec-dev",
       "subtitle": "Independent SideStore fork for iPhone and iPad.",
@@ -29,13 +29,13 @@
       "category": "utilities",
       "tintColor": "#147D60",
       "iconFile": "catalog/assets/zloader-icon.png",
-      "versionDescription": "My Apps uses four columns with larger icons and fully wrapping app names. Settings and submenus share native grouped surfaces, separators and row sizing while keeping the existing palette and symbols. Selecting the integrated tunnel offers setup when its configuration or signing authorization is missing.",
+      "versionDescription": "Settings styling now covers every nested destination and modal, including provisioning-profile details and the Apple Developer Portal. Normal entry typography, grouped surfaces and technical fields are consistent. Initial integrated VPN configuration now sets the complete provider protocol before saving, fixing the missing-protocol error.",
       "screenshots": [],
-      "marketingVersion": "0.7.47",
+      "marketingVersion": "0.7.48",
       "releaseAsset": {
-        "size": 32405763,
-        "sha256": "bd3ee602c28779518019eb9cb3fc2077956c820078df0ef993d0baa7d04ff93f",
-        "updatedAt": "2026-10-08T08:00:11Z"
+        "size": 32705350,
+        "sha256": "48e86c1e0f535333054f62a1b8018c3b30b9e8be231f55d91f0bffba3ce0381c",
+        "updatedAt": "2026-10-08T08:15:24Z"
       }
     }
   },
