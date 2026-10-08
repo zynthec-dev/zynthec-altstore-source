@@ -20,8 +20,8 @@
       }
     },
     "com.zynthec.zLoader": {
-      "ipaFile": "zLoader-0.7.39-resignable.ipa",
-      "releaseTag": "app-zloader-v0.7.39-20261008T015419Z-75ef516c",
+      "ipaFile": "zLoader-0.7.40-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.40-20261008T043141Z-27cdd07d",
       "name": "zLoader",
       "developerName": "zynthec-dev",
       "subtitle": "Independent SideStore fork for iPhone and iPad.",
@@ -29,13 +29,13 @@
       "category": "utilities",
       "tintColor": "#147D60",
       "iconFile": "catalog/assets/zloader-icon.png",
-      "versionDescription": "Editable signing and extension customization; IPA signing details; Developer Portal controls and App ID renaming; simplified Connection Settings; clearer refresh progress in light and dark mode.",
+      "versionDescription": "Retain profile-authorized capabilities and omit ungranted application rights instead of blocking installation. Reuse matching existing and wildcard profiles. Missing HealthKit and increased-memory rights no longer prevent LiveContainer signing.",
       "screenshots": [],
-      "marketingVersion": "0.7.39",
+      "marketingVersion": "0.7.40",
       "releaseAsset": {
-        "size": 32308115,
-        "sha256": "75ef516c4eeed9b27766af184f82d6b200e42c41c5ee2ee837517e036a3c7a8a",
-        "updatedAt": "2026-10-08T01:54:19Z"
+        "size": 32310601,
+        "sha256": "27cdd07dfa3238cda6401e7883af72a42e101138db52d364c4bd4099bb085b39",
+        "updatedAt": "2026-10-08T04:31:41Z"
       }
     }
   },
