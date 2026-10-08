@@ -20,8 +20,8 @@
       }
     },
     "com.zynthec.zLoader": {
-      "ipaFile": "zLoader-0.7.44-resignable.ipa",
-      "releaseTag": "app-zloader-v0.7.44-20261008T071522Z-7a2731d6",
+      "ipaFile": "zLoader-0.7.45-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.45-20261008T073105Z-10569ef9",
       "name": "zLoader",
       "developerName": "zynthec-dev",
       "subtitle": "Independent SideStore fork for iPhone and iPad.",
@@ -29,13 +29,13 @@
       "category": "utilities",
       "tintColor": "#147D60",
       "iconFile": "catalog/assets/zloader-icon.png",
-      "versionDescription": "Self-update exits only after device installation acknowledgement. Launch apps stopped and attach JIT before startup; automatic JIT is a per-app setting. Native Liquid Glass cards, light/dark material texture and a responsive My Apps launcher.",
+      "versionDescription": "Settings and nested menus use opaque native surfaces instead of Liquid Glass. My Apps shows a home-screen icon grid with app names and small localized remaining-day labels; operation progress appears over the icon only while needed.",
       "screenshots": [],
-      "marketingVersion": "0.7.44",
+      "marketingVersion": "0.7.45",
       "releaseAsset": {
-        "size": 32389861,
-        "sha256": "7a2731d6ac4ba5abba346c5e8c2421829346337577216bed942d22fdd4d8c9c0",
-        "updatedAt": "2026-10-08T07:15:22Z"
+        "size": 32401972,
+        "sha256": "10569ef93334b3ade5eefddc76126f012ee32ea21553b15f683bd1167537f3b6",
+        "updatedAt": "2026-10-08T07:31:05Z"
       }
     }
   },
