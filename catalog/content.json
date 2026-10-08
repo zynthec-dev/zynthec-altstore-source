@@ -20,8 +20,8 @@
       }
     },
     "com.zynthec.zLoader": {
-      "ipaFile": "zLoader-0.7.45-resignable.ipa",
-      "releaseTag": "app-zloader-v0.7.45-20261008T073105Z-10569ef9",
+      "ipaFile": "zLoader-0.7.46-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.46-20261008T074108Z-28211597",
       "name": "zLoader",
       "developerName": "zynthec-dev",
       "subtitle": "Independent SideStore fork for iPhone and iPad.",
@@ -29,13 +29,13 @@
       "category": "utilities",
       "tintColor": "#147D60",
       "iconFile": "catalog/assets/zloader-icon.png",
-      "versionDescription": "Settings and nested menus use opaque native surfaces instead of Liquid Glass. My Apps shows a home-screen icon grid with app names and small localized remaining-day labels; operation progress appears over the icon only while needed.",
+      "versionDescription": "Self-update accepts the first installation progress response, including zero percent, and exits directly after acknowledgement. Package installation now matches the actual AFC transfer, including the app-directory fallback when no IPA is available.",
       "screenshots": [],
-      "marketingVersion": "0.7.45",
+      "marketingVersion": "0.7.46",
       "releaseAsset": {
-        "size": 32401972,
-        "sha256": "10569ef93334b3ade5eefddc76126f012ee32ea21553b15f683bd1167537f3b6",
-        "updatedAt": "2026-10-08T07:31:05Z"
+        "size": 32402707,
+        "sha256": "28211597ab6346871f7d47afc5836b4b71979e1eefe250e563bacdf1b137919a",
+        "updatedAt": "2026-10-08T07:41:08Z"
       }
     }
   },
