@@ -20,8 +20,8 @@
       }
     },
     "com.zynthec.zLoader": {
-      "ipaFile": "zLoader-0.7.46-resignable.ipa",
-      "releaseTag": "app-zloader-v0.7.46-20261008T074108Z-28211597",
+      "ipaFile": "zLoader-0.7.47-resignable.ipa",
+      "releaseTag": "app-zloader-v0.7.47-20261008T080011Z-bd3ee602",
       "name": "zLoader",
       "developerName": "zynthec-dev",
       "subtitle": "Independent SideStore fork for iPhone and iPad.",
@@ -29,13 +29,13 @@
       "category": "utilities",
       "tintColor": "#147D60",
       "iconFile": "catalog/assets/zloader-icon.png",
-      "versionDescription": "Self-update accepts the first installation progress response, including zero percent, and exits directly after acknowledgement. Package installation now matches the actual AFC transfer, including the app-directory fallback when no IPA is available.",
+      "versionDescription": "My Apps uses four columns with larger icons and fully wrapping app names. Settings and submenus share native grouped surfaces, separators and row sizing while keeping the existing palette and symbols. Selecting the integrated tunnel offers setup when its configuration or signing authorization is missing.",
       "screenshots": [],
-      "marketingVersion": "0.7.46",
+      "marketingVersion": "0.7.47",
       "releaseAsset": {
-        "size": 32402707,
-        "sha256": "28211597ab6346871f7d47afc5836b4b71979e1eefe250e563bacdf1b137919a",
-        "updatedAt": "2026-10-08T07:41:08Z"
+        "size": 32405763,
+        "sha256": "bd3ee602c28779518019eb9cb3fc2077956c820078df0ef993d0baa7d04ff93f",
+        "updatedAt": "2026-10-08T08:00:11Z"
       }
     }
   },
