@@ -318,6 +318,24 @@ async function auth(action, body) {
 }
 
 async function showDashboard() {
+  const status = await auth("status");
+  $("#changePassword").classList.remove("hidden");
+  if (!status.connected) {
+    state.connectionPending = true;
+    $("#setupTokenField").classList.remove("hidden");
+    $("#setupToken").required = true;
+    $("#setupConfirmField").classList.add("hidden");
+    $("#setupConfirm").required = false;
+    $("#password").closest("label").classList.add("hidden");
+    $("#password").required = false;
+    $("#loginDescription").textContent = "Du bist angemeldet. Dein temporäres Passwort kannst du oben über „Passwort ändern“ ersetzen. Verbinde einmal GitHub, damit Apps und Source-Einstellungen gespeichert werden können.";
+    $("#connect").textContent = "GitHub verbinden";
+    $("#connect").disabled = false;
+    $("#logout").classList.remove("hidden");
+    $("#loginStatus").textContent = "";
+    return;
+  }
+  state.connectionPending = false;
   await load();
   $("#loginPanel").classList.add("hidden");
   $("#dashboard").classList.remove("hidden");
@@ -329,6 +347,12 @@ $("#loginForm").onsubmit = async event => {
   $("#connect").disabled = true;
   $("#loginStatus").textContent = "Admin-Zugang wird geprüft …";
   try {
+    if (state.connectionPending) {
+      await auth("connection", { token: $("#setupToken").value.trim() });
+      $("#loginForm").reset();
+      await showDashboard();
+      return;
+    }
     const password = $("#password").value;
     if (!state.initialized && password !== $("#setupConfirm").value) throw new Error("Die Passwörter stimmen nicht überein.");
     await auth(state.initialized ? "login" : "setup", { password,

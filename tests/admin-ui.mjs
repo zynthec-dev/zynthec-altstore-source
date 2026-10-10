@@ -30,12 +30,13 @@ try {
  let settingsSha = 'SETTINGS_SHA'; let remoteSettingsChanged = false; let rejectRef = false;
  const blobs = new Map(); const trees = new Map(); let sequence = 0; let pendingTree;
  await page.route('https://zloader.zynthec.com/assets/source-icon.png', route => route.fulfill({ contentType:'image/png', body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a4x8AAAAASUVORK5CYII=', 'base64') }));
- let authenticated = false; let initialized = true; let testPassword = 'TEST_ONLY_PASSWORD_123';
+ let authenticated = false; let initialized = true; let connected = true; let testPassword = 'TEST_ONLY_PASSWORD_123';
  await page.route('**/admin/api/*', async route => {
   const action = new URL(route.request().url()).pathname.split('/').at(-1);
   const body = route.request().postDataJSON();
   let payload = {}; let status = 200;
-  if (action === 'status') payload = {initialized,authenticated};
+  if (action === 'status') payload = {initialized,authenticated,connected};
+  if (action === 'connection') {connected=true;payload={connected:true};}
   if (action === 'setup') { initialized=true;authenticated=true;testPassword=body.password;payload={authenticated:true}; }
   if (action === 'login') { if(body.password !== testPassword) {status=401;payload={message:'Passwort ist nicht korrekt.'};} else {authenticated=true;payload={authenticated:true};} }
   if (action === 'password') {
@@ -195,6 +196,17 @@ try {
  await page.locator('#dashboard:not(.hidden)').waitFor();
  assert.equal(initialized,true);
  assert.equal(await page.locator('#setupToken').inputValue(),'');
+ await page.locator('#logout').click();
+ await page.locator('#loginPanel:not(.hidden)').waitFor();
+ connected=false;
+ await page.locator('#password').fill(testPassword);
+ await page.locator('#connect').click();
+ await page.getByRole('button',{name:'GitHub verbinden',exact:true}).waitFor();
+ assert.ok(await page.locator('#password').isHidden());
+ await page.locator('#setupToken').fill('TEST_ONLY_NOT_A_REAL_TOKEN');
+ await page.locator('#connect').click();
+ await page.locator('#dashboard:not(.hidden)').waitFor();
+ assert.equal(connected,true);
  assert.deepEqual(errors, []);
  assert.equal(consoleErrors.length, 1, 'Only the deliberately simulated GitHub conflict may appear in the console');
  assert.match(consoleErrors[0], /status of 422/);

@@ -40,6 +40,8 @@ Neue Versionen erhalten beim Upload aus `/admin/` automatisch einen eigenen Rele
 
 Der reguläre Zugang zu `/admin/` erfolgt mit einem Passwort. Über **Passwort ändern** im Dashboard kannst du es nach Eingabe des aktuellen Passworts ändern. Alle anderen Sitzungen werden dabei ungültig.
 
+Wenn der Cloudflare-Administrator bereits ein temporäres Passwort bereitgestellt hat, erfolgt zuerst die Passwortanmeldung und dann die einmalige GitHub-Verbindung im geschützten Bereich. Danach das temporäre Passwort im Panel ersetzen. Ein temporärer Zugang speichert zunächst keinen GitHub-Token; die App-Verwaltung bleibt bis zur Verbindung gesperrt.
+
 Nur bei der **ersten Einrichtung** gibst du einmal einen GitHub-Token des Repository-Eigentümers `zynthec-dev` ein und legst ein Passwort mit mindestens 12 Zeichen fest. Der Fine-grained Token sollte auf `zynthec-dev/zynthec-altstore-source` beschränkt sein mit:
 
 - Repository permission `Contents: Read and write`

@@ -101,7 +101,27 @@ export async function adminAPI(request, env) {
   try {
     const config = await db.prepare("SELECT * FROM admin_config WHERE id=1").first();
     const signedIn = config && await session(request, db);
-    if (route === "status" && request.method === "GET") return json({ initialized: !!config, authenticated: !!signedIn });
+    if (route === "status" && request.method === "GET") return json({ initialized: !!config, authenticated: !!signedIn, connected: !!config?.github_token });
+    if (route === "connection" && request.method === "POST") {
+      if (!signedIn) return json({ message: "Bitte anmelden." }, 401);
+      if (config.github_token) return json({ message: "GitHub ist bereits verbunden." }, 409);
+      if (await rateLimited(request, db)) return json({ message: "Zu viele Versuche. Bitte in 15 Minuten erneut versuchen." }, 429);
+      const text = await request.text();
+      if (text.length > 8192) return json({ message: "Anfrage zu groß." }, 413);
+      const body = JSON.parse(text);
+      if (typeof body.token !== "string" || body.token.length > 512) return json({ message: "GitHub-Zugang fehlt." }, 400);
+      const [userResponse, repoResponse] = await Promise.all([
+        github("/user", body.token), github(`/repos/${REPO}`, body.token),
+      ]);
+      if (!userResponse.ok || !repoResponse.ok) return json({ message: "GitHub-Zugang konnte nicht bestätigt werden." }, 403);
+      const user = await userResponse.json(), repo = await repoResponse.json();
+      if (user.login !== "zynthec-dev" || !repo.permissions?.push) return json({ message: "GitHub-Token des Repository-Eigentümers mit Schreibrechten benötigt." }, 403);
+      const encrypted = await tokenCipher(body.token, env.ADMIN_ENCRYPTION_KEY);
+      const result = await db.prepare("UPDATE admin_config SET github_token=? WHERE id=1 AND github_token='' AND revision=?")
+        .bind(encrypted, config.revision).run();
+      if (!result.meta.changes) return json({ message: "Der Zugang wurde inzwischen geändert. Bitte erneut anmelden." }, 409);
+      return json({ connected: true });
+    }
     if (route === "logout" && request.method === "POST") {
       if (signedIn) await db.prepare("DELETE FROM admin_sessions WHERE hash=?").bind(signedIn.hash).run();
       return json({ authenticated: false }, 200, { "Set-Cookie": cookie("", 0) });
@@ -146,6 +166,7 @@ export async function adminAPI(request, env) {
     }
     if (route.startsWith("github/") || route === "github") {
       if (!signedIn) return json({ message: "Bitte anmelden." }, 401);
+      if (!config.github_token) return json({ message: "Bitte zuerst GitHub verbinden." }, 409);
       if (request.headers.get("X-Admin-Request") !== "1") return json({ message: "Nicht erlaubte Anfrage." }, 403);
       const path = route.slice("github".length);
       const bodyText = mutating ? await request.text() : undefined;

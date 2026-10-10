@@ -52,7 +52,7 @@ try {
   const schema = await readFile(new URL('../migrations/0001_admin.sql', import.meta.url),'utf8');
   execute(schema.split(';').filter(s=>s.trim()).map(sql=>({sql,params:[]})));
   assert.equal((await adminAPI(request('status'),{})).status,503);
-  assert.deepEqual(await (await call('status')).json(),{initialized:false,authenticated:false});
+  assert.deepEqual(await (await call('status')).json(),{initialized:false,authenticated:false,connected:false});
   assert.equal((await call('github/contents/catalog/content.json')).status,401);
   assert.equal((await call('setup',{password,token},null,{Origin:'https://evil.example'})).status,403);
   owner='someone-else';
@@ -91,6 +91,18 @@ try {
   await db.prepare('DELETE FROM admin_attempts').run();
   for(let i=0;i<8;i++) assert.equal((await call('login',{password:'incorrect'})).status,401);
   assert.equal((await call('login',{password:'incorrect'})).status,429);
+  // Provisioned temporary password: authentication works before token setup;
+  // only that authenticated user can establish the one-time GitHub connection.
+  await db.prepare('DELETE FROM admin_attempts').run();
+  await db.prepare("UPDATE admin_config SET github_token='' WHERE id=1").run();
+  assert.equal((await call('connection',{token})).status,401);
+  response=await call('login',{password:'new-test-password-123'});
+  const pendingCookie=response.headers.get('set-cookie').split(';')[0];
+  assert.equal((await (await call('status',undefined,pendingCookie)).json()).connected,false);
+  assert.equal((await call('github/contents/catalog/content.json',undefined,pendingCookie)).status,409);
+  assert.equal((await call('connection',{token},pendingCookie)).status,200);
+  assert.equal((await (await call('status',undefined,pendingCookie)).json()).connected,true);
+  assert.equal((await call('connection',{token},pendingCookie)).status,409);
   console.log('PASS: password setup, owner verification, encryption, login, cookies, proxy restriction, CSRF, password change, session revocation, logout and throttling.');
 } finally {
   globalThis.fetch=originalFetch;

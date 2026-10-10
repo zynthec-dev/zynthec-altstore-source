@@ -15,7 +15,7 @@
   <main class="admin-shell">
     <header class="admin-header">
       <a class="brand" href="./"><img src="../assets/source-icon.png" alt="" id="brandIcon"><span><strong id="brandName">{{SOURCE_NAME}}</strong><small>App-Verwaltung</small></span></a>
-      <div class="header-actions"><label class="appearance"><span>Darstellung</span><select id="appearance" aria-label="Darstellung"><option value="system">System</option><option value="light">Hell</option><option value="dark">Dunkel</option></select></label><button class="secondary-button hidden" id="logout">Abmelden</button></div>
+      <div class="header-actions"><label class="appearance"><span>Darstellung</span><select id="appearance" aria-label="Darstellung"><option value="system">System</option><option value="light">Hell</option><option value="dark">Dunkel</option></select></label><button type="button" class="secondary-button hidden" id="changePassword">Passwort ändern</button><button class="secondary-button hidden" id="logout">Abmelden</button></div>
     </header>
 
     <section class="login glass" id="loginPanel">
@@ -32,7 +32,6 @@
     </section>
 
     <section class="dashboard hidden" id="dashboard">
-      <div class="header-actions"><button type="button" class="secondary-button" id="changePassword">Passwort ändern</button></div>
       <section class="source-card glass" aria-label="Source">
         <img id="sourceIcon" src="../assets/source-icon.png" alt="Source-Icon" width="64" height="64">
         <div class="source-copy"><p class="eyebrow">DEINE SOURCE</p><h2 id="sourceName">{{SOURCE_NAME}}</h2><p id="sourceSubtitle"></p><span id="sourceColor" class="source-color" aria-label="Akzentfarbe"></span></div>
