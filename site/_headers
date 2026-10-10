@@ -2,6 +2,8 @@
   Cache-Control: no-cache
   X-Content-Type-Options: nosniff
   Referrer-Policy: same-origin
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
 /assets/*
   Cache-Control: public, max-age=300
   Access-Control-Allow-Origin: *

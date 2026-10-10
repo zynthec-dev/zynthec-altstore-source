@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const code = await readFile(new URL('../site/_worker.js', import.meta.url), 'utf8');
+const api = await readFile(new URL('../site/admin-api.js', import.meta.url), 'utf8');
+const code = (await readFile(new URL('../site/_worker.js', import.meta.url), 'utf8'))
+  .replace('"./admin-api.js"', JSON.stringify(`data:text/javascript;base64,${Buffer.from(api).toString('base64')}`));
 const { default: worker } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
 const calls = [];
 const env = { ASSETS: { fetch: async request => {

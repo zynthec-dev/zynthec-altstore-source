@@ -1,7 +1,9 @@
 // Cloudflare Pages advanced mode: the domain root is the AltStore JSON feed.
+import { adminAPI } from "./admin-api.js";
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith("/admin/api/")) return adminAPI(request, env);
     if (url.pathname === "/source.json") {
       url.pathname = "/";
       return Response.redirect(url.toString(), 308);

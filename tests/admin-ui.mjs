@@ -30,7 +30,22 @@ try {
  let settingsSha = 'SETTINGS_SHA'; let remoteSettingsChanged = false; let rejectRef = false;
  const blobs = new Map(); const trees = new Map(); let sequence = 0; let pendingTree;
  await page.route('https://zloader.zynthec.com/assets/source-icon.png', route => route.fulfill({ contentType:'image/png', body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a4x8AAAAASUVORK5CYII=', 'base64') }));
- await page.route('https://api.github.com/**', async route => {
+ let authenticated = false; let initialized = true; let testPassword = 'TEST_ONLY_PASSWORD_123';
+ await page.route('**/admin/api/*', async route => {
+  const action = new URL(route.request().url()).pathname.split('/').at(-1);
+  const body = route.request().postDataJSON();
+  let payload = {}; let status = 200;
+  if (action === 'status') payload = {initialized,authenticated};
+  if (action === 'setup') { initialized=true;authenticated=true;testPassword=body.password;payload={authenticated:true}; }
+  if (action === 'login') { if(body.password !== testPassword) {status=401;payload={message:'Passwort ist nicht korrekt.'};} else {authenticated=true;payload={authenticated:true};} }
+  if (action === 'password') {
+   if(body.currentPassword !== testPassword) {status=401;payload={message:'Das aktuelle Passwort ist nicht korrekt.'};}
+   else {testPassword=body.password;payload={authenticated:true};}
+  }
+  if (action === 'logout') authenticated=false;
+  await route.fulfill({status,contentType:'application/json',body:JSON.stringify(payload)});
+ });
+ await page.route('**/admin/api/github/**', async route => {
   const method = route.request().method(), url = route.request().url();
   const body = method !== 'GET' ? JSON.parse(route.request().postData() || '{}') : null;
   if (method !== 'GET') mutations.push({ method, url, body: route.request().postData() });
@@ -58,9 +73,22 @@ try {
  await page.screenshot({ path: `${screenshots}/login-dark.png`, fullPage: true, animations: "disabled" });
  await page.reload();
  assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
- await page.locator('#token').fill('TEST_ONLY_NO_CREDENTIAL');
+ await page.locator('#password').fill(testPassword);
  await page.locator('#connect').click();
  await page.locator('#dashboard:not(.hidden)').waitFor();
+ assert.equal(await page.evaluate(()=>sessionStorage.getItem('zynthecAdmin')),null);
+ assert.equal(await page.locator('#password').inputValue(),'');
+ await page.locator('#changePassword').click();
+ await page.locator('#passwordForm input[name="currentPassword"]').fill(testPassword);
+ await page.locator('#passwordForm input[name="password"]').fill('NEW_TEST_PASSWORD_123');
+ await page.locator('#passwordForm input[name="confirmation"]').fill('MISMATCH');
+ await page.getByRole('button',{name:'Passwort speichern',exact:true}).click();
+ await page.getByText('Die Passwörter stimmen nicht überein.').waitFor();
+ await page.locator('#passwordForm input[name="confirmation"]').fill('NEW_TEST_PASSWORD_123');
+ await page.screenshot({path:`${screenshots}/password-change.png`,fullPage:true});
+ await page.getByRole('button',{name:'Passwort speichern',exact:true}).click();
+ await page.locator('#passwordEditor').waitFor({state:'hidden'});
+ assert.equal(testPassword,'NEW_TEST_PASSWORD_123');
  assert.equal(await page.locator('#sourceName').innerText(), 'zLoader Source');
  assert.match(await page.locator('.admin-item').first().innerText(), /Another App/);
  await page.screenshot({ path: `${screenshots}/dashboard-dark.png`, fullPage: true, animations: "disabled" });
@@ -114,6 +142,10 @@ try {
  assert.equal(await page.locator('#sourceName').innerText(), 'Meine Source');
  rejectRef = false;
  await page.locator('#cancelSource').click();
+ await page.locator('#changePassword').click();
+ await page.screenshot({path:`${screenshots}/password-mobile.png`,fullPage:true,animations:'disabled'});
+ assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Password form must fit mobile');
+ await page.locator('#cancelPassword').click();
  await page.locator('.admin-item').first().click();
  assert.equal(await page.locator('#editorForm input[name="name"]').inputValue(), 'Another App');
  await page.getByRole('button', { name: 'Schließen', exact: true }).click();
@@ -149,6 +181,20 @@ try {
  assert.match(staged.releaseTag, /^app-demo-app-v1-0-\d{8}T\d{6}Z-[a-f0-9]{8}$/);
  assert.ok(blobs.has(staged.pendingUpload.sha));
  assert.deepEqual(blobs.get(staged.pendingUpload.sha), Buffer.from('test ipa'));
+ await page.locator('#logout').click();
+ await page.locator('#loginPanel:not(.hidden)').waitFor();
+ assert.equal(authenticated,false);
+ initialized=false;
+ await page.reload();
+ await page.locator('#setupTokenField:not(.hidden)').waitFor();
+ await page.locator('#setupToken').fill('TEST_ONLY_NOT_A_REAL_TOKEN');
+ await page.locator('#password').fill('SETUP_TEST_PASSWORD_123');
+ await page.locator('#setupConfirm').fill('SETUP_TEST_PASSWORD_123');
+ await page.screenshot({path:`${screenshots}/first-setup-mobile.png`,fullPage:true,animations:'disabled'});
+ await page.locator('#connect').click();
+ await page.locator('#dashboard:not(.hidden)').waitFor();
+ assert.equal(initialized,true);
+ assert.equal(await page.locator('#setupToken').inputValue(),'');
  assert.deepEqual(errors, []);
  assert.equal(consoleErrors.length, 1, 'Only the deliberately simulated GitHub conflict may appear in the console');
  assert.match(consoleErrors[0], /status of 422/);

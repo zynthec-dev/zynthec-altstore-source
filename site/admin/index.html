@@ -21,13 +21,18 @@
     <section class="login glass" id="loginPanel">
       <p class="eyebrow">ADMIN-BEREICH</p>
       <h1>Apps verwalten.</h1>
-        <p>Verbinde einmal deinen geschützten Admin-Zugang. Danach kannst du deine Source gestalten und Apps hochladen, bearbeiten und entfernen. Der Token bleibt ausschließlich in diesem Browser-Tab.</p>
-      <label>Admin-Token<input id="token" type="password" placeholder="github_pat_…" autocomplete="off"></label>
-      <button class="primary-button" id="connect">App-Verwaltung öffnen</button>
+      <p id="loginDescription">Melde dich mit deinem Passwort an, um deine Source und Apps zu verwalten.</p>
+      <form id="loginForm">
+        <label class="hidden" id="setupTokenField">GitHub-Token zur einmaligen Einrichtung<input id="setupToken" type="password" autocomplete="off"><small>Nur bei der ersten Einrichtung. Wird verschlüsselt auf dem Server gespeichert, nicht im Browser.</small></label>
+        <label>Passwort<input id="password" type="password" autocomplete="current-password" required maxlength="256"></label>
+        <label class="hidden" id="setupConfirmField">Passwort wiederholen<input id="setupConfirm" type="password" autocomplete="new-password" maxlength="256"></label>
+        <button class="primary-button" id="connect" type="submit" disabled>App-Verwaltung öffnen</button>
+      </form>
       <p class="form-status" id="loginStatus" role="status" aria-live="polite"></p>
     </section>
 
     <section class="dashboard hidden" id="dashboard">
+      <div class="header-actions"><button type="button" class="secondary-button" id="changePassword">Passwort ändern</button></div>
       <section class="source-card glass" aria-label="Source">
         <img id="sourceIcon" src="../assets/source-icon.png" alt="Source-Icon" width="64" height="64">
         <div class="source-copy"><p class="eyebrow">DEINE SOURCE</p><h2 id="sourceName">{{SOURCE_NAME}}</h2><p id="sourceSubtitle"></p><span id="sourceColor" class="source-color" aria-label="Akzentfarbe"></span></div>
@@ -63,6 +68,16 @@
     </form>
   </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <dialog id="passwordEditor" aria-labelledby="passwordTitle">
+    <form id="passwordForm"><div class="editor-body">
+      <h2 id="passwordTitle">Passwort ändern</h2>
+      <label class="field">Aktuelles Passwort<input name="currentPassword" type="password" autocomplete="current-password" required maxlength="256"></label>
+      <label class="field">Neues Passwort<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="256"><small>Mindestens 12 Zeichen. Andere Sitzungen werden abgemeldet.</small></label>
+      <label class="field">Neues Passwort wiederholen<input name="confirmation" type="password" autocomplete="new-password" required maxlength="256"></label>
+      <div class="editor-actions"><span></span><button type="button" id="cancelPassword" class="secondary-button">Abbrechen</button><button type="submit" class="primary-button">Passwort speichern</button></div>
+      <p id="passwordStatus" class="form-status" role="status" aria-live="polite"></p>
+    </div></form>
+  </dialog>
   <script src="./admin.js" type="module"></script>
 </body>
 </html>

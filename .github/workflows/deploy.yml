@@ -44,3 +44,4 @@ jobs:
         run: |
           python3 -m unittest discover -s tests -v
           node tests/cloudflare-routing.mjs
+          node tests/admin-auth.mjs

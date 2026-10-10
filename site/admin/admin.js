@@ -3,9 +3,8 @@ const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, character =>
   "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
 })[character]);
 
-const REPOSITORY = "zynthec-dev/zynthec-altstore-source";
 const BRANCH = "main";
-const state = { token: "", content: null, file: null, edit: null, settings: null, settingsFile: null, sourceSaving: false, iconPreview: null, sourceDraftPreview: null };
+const state = { initialized: true, content: null, file: null, edit: null, settings: null, settingsFile: null, sourceSaving: false, iconPreview: null, sourceDraftPreview: null };
 const sourceFields = [
   ["name", "Anzeigename", "text"],
   ["subtitle", "Kurzbeschreibung", "text"],
@@ -29,12 +28,11 @@ class ApiError extends Error {
 }
 
 async function api(path, options = {}) {
-  const response = await fetch(`https://api.github.com/repos/${REPOSITORY}${path}`, {
+  const response = await fetch(`/admin/api/github${path}`, {
     ...options,
     headers: {
       Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${state.token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
+      "X-Admin-Request": "1",
       ...(typeof options.body === "string" ? { "Content-Type": "application/json" } : {}),
       ...(options.headers || {})
     }
@@ -308,21 +306,60 @@ function toast(message) {
   setTimeout(() => element.classList.remove("show"), 2800);
 }
 
-$("#connect").onclick = async () => {
-  state.token = $("#token").value.trim();
+async function auth(action, body) {
+  const response = await fetch(`/admin/api/${action}`, {
+    method: body === undefined ? "GET" : "POST", credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "X-Admin-Request": "1" },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) })
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.message || "Anmeldung fehlgeschlagen.");
+  return payload;
+}
+
+async function showDashboard() {
+  await load();
+  $("#loginPanel").classList.add("hidden");
+  $("#dashboard").classList.remove("hidden");
+  $("#logout").classList.remove("hidden");
+}
+
+$("#loginForm").onsubmit = async event => {
+  event.preventDefault();
+  $("#connect").disabled = true;
   $("#loginStatus").textContent = "Admin-Zugang wird geprüft …";
   try {
-    const repository = await api("");
-    if (!repository.permissions?.push) throw new Error("Der Admin-Token hat keine Schreibberechtigung.");
-    sessionStorage.setItem("zynthecAdmin", JSON.stringify({ token: state.token }));
-    await load();
-    $("#loginPanel").classList.add("hidden");
-    $("#dashboard").classList.remove("hidden");
-    $("#logout").classList.remove("hidden");
+    const password = $("#password").value;
+    if (!state.initialized && password !== $("#setupConfirm").value) throw new Error("Die Passwörter stimmen nicht überein.");
+    await auth(state.initialized ? "login" : "setup", { password,
+      ...(!state.initialized ? { token: $("#setupToken").value.trim() } : {}) });
+    state.initialized = true;
+    $("#loginForm").reset();
+    await showDashboard();
   } catch (error) { $("#loginStatus").textContent = error.message; }
+  finally { $("#connect").disabled = false; }
 };
 
-$("#logout").onclick = () => { sessionStorage.removeItem("zynthecAdmin"); location.reload(); };
+$("#logout").onclick = async () => {
+  try { await auth("logout", {}); location.reload(); }
+  catch (error) { toast(error.message); }
+};
+$("#changePassword").onclick = () => { $("#passwordForm").reset(); $("#passwordStatus").textContent = ""; $("#passwordEditor").showModal(); };
+$("#cancelPassword").onclick = () => $("#passwordEditor").close();
+$("#passwordEditor").addEventListener("close", () => $("#passwordForm").reset());
+$("#passwordForm").onsubmit = async event => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const button = event.target.querySelector('[type="submit"]');
+  button.disabled = true;
+  try {
+    if (form.get("password") !== form.get("confirmation")) throw new Error("Die Passwörter stimmen nicht überein.");
+    await auth("password", { password: form.get("password"), currentPassword: form.get("currentPassword") });
+    $("#passwordEditor").close();
+    toast("Passwort geändert. Andere Sitzungen wurden abgemeldet.");
+  } catch (error) { $("#passwordStatus").textContent = error.message; }
+  finally { button.disabled = false; }
+};
 $("#addApp").onclick = () => openEditor();
 $("#editSource").onclick = openSourceEditor;
 $("#sourceForm").addEventListener("submit", event => { event.preventDefault(); saveSource(); });
@@ -347,10 +384,27 @@ $("#editorForm").addEventListener("submit", event => { event.preventDefault(); i
 $("#deleteItem").onclick = remove;
 $("#cancelEditor").onclick = () => $("#editor").close();
 
-try {
-  const saved = JSON.parse(sessionStorage.getItem("zynthecAdmin"));
-  if (saved?.token) { state.token = saved.token; $("#token").value = state.token; $("#connect").click(); }
-} catch {}
+// Remove credentials persisted by the old token-based panel.
+try { sessionStorage.removeItem("zynthecAdmin"); } catch {}
+async function initializeLogin() {
+  try {
+    const status = await auth("status");
+    state.initialized = status.initialized;
+    if (status.authenticated) { await showDashboard(); return; }
+    if (!status.initialized) {
+      $("#setupTokenField").classList.remove("hidden");
+      $("#setupConfirmField").classList.remove("hidden");
+      $("#setupToken").required = true;
+      $("#setupConfirm").required = true;
+      $("#password").minLength = 12;
+      $("#password").autocomplete = "new-password";
+      $("#loginDescription").textContent = "Einmalige Einrichtung: Bestätige den GitHub-Zugang des Repository-Eigentümers und lege dein Admin-Passwort fest. Danach meldest du dich nur noch mit Passwort an.";
+      $("#connect").textContent = "Passwortzugang einrichten";
+    }
+    $("#connect").disabled = false;
+  } catch (error) { $("#loginStatus").textContent = error.message; }
+}
+initializeLogin();
 
 
 // Appearance is a local UI preference and contains no authentication data.
