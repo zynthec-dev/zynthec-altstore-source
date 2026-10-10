@@ -36,8 +36,6 @@ try {
   const body = route.request().postDataJSON();
   let payload = {}; let status = 200;
   if (action === 'status') payload = {initialized,authenticated,connected};
-  if (action === 'connection') {connected=true;payload={connected:true};}
-  if (action === 'setup') { initialized=true;authenticated=true;testPassword=body.password;payload={authenticated:true}; }
   if (action === 'login') { if(body.password !== testPassword) {status=401;payload={message:'Passwort ist nicht korrekt.'};} else {authenticated=true;payload={authenticated:true};} }
   if (action === 'password') {
    if(body.currentPassword !== testPassword) {status=401;payload={message:'Das aktuelle Passwort ist nicht korrekt.'};}
@@ -185,28 +183,23 @@ try {
  await page.locator('#logout').click();
  await page.locator('#loginPanel:not(.hidden)').waitFor();
  assert.equal(authenticated,false);
- initialized=false;
- await page.reload();
- await page.locator('#setupTokenField:not(.hidden)').waitFor();
- await page.locator('#setupToken').fill('TEST_ONLY_NOT_A_REAL_TOKEN');
- await page.locator('#password').fill('SETUP_TEST_PASSWORD_123');
- await page.locator('#setupConfirm').fill('SETUP_TEST_PASSWORD_123');
- await page.screenshot({path:`${screenshots}/first-setup-mobile.png`,fullPage:true,animations:'disabled'});
- await page.locator('#connect').click();
- await page.locator('#dashboard:not(.hidden)').waitFor();
- assert.equal(initialized,true);
- assert.equal(await page.locator('#setupToken').inputValue(),'');
- await page.locator('#logout').click();
- await page.locator('#loginPanel:not(.hidden)').waitFor();
+ assert.equal(await page.locator('#setupToken, #setupConfirm, #token').count(),0);
  connected=false;
  await page.locator('#password').fill(testPassword);
  await page.locator('#connect').click();
- await page.getByRole('button',{name:'GitHub verbinden',exact:true}).waitFor();
- assert.ok(await page.locator('#password').isHidden());
- await page.locator('#setupToken').fill('TEST_ONLY_NOT_A_REAL_TOKEN');
- await page.locator('#connect').click();
  await page.locator('#dashboard:not(.hidden)').waitFor();
- assert.equal(connected,true);
+ assert.ok(await page.locator('#serverStatus:not(.hidden)').isVisible());
+ assert.ok(await page.locator('#addApp').isDisabled());
+ assert.ok(await page.locator('#changePassword').isEnabled());
+ await page.locator('#changePassword').click();
+ await page.locator('#passwordEditor').waitFor({state:'visible'});
+ await page.locator('#cancelPassword').click();
+ await page.locator('#logout').click();
+ await page.locator('#loginPanel:not(.hidden)').waitFor();
+ initialized=false;
+ await page.reload();
+ await page.getByText('Der Admin-Zugang muss serverseitig eingerichtet werden.').waitFor();
+ assert.ok(await page.locator('#connect').isDisabled());
  assert.deepEqual(errors, []);
  assert.equal(consoleErrors.length, 1, 'Only the deliberately simulated GitHub conflict may appear in the console');
  assert.match(consoleErrors[0], /status of 422/);

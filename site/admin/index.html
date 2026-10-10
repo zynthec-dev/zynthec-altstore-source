@@ -23,15 +23,14 @@
       <h1>Apps verwalten.</h1>
       <p id="loginDescription">Melde dich mit deinem Passwort an, um deine Source und Apps zu verwalten.</p>
       <form id="loginForm">
-        <label class="hidden" id="setupTokenField">GitHub-Token zur einmaligen Einrichtung<input id="setupToken" type="password" autocomplete="off"><small>Nur bei der ersten Einrichtung. Wird verschlüsselt auf dem Server gespeichert, nicht im Browser.</small></label>
         <label>Passwort<input id="password" type="password" autocomplete="current-password" required maxlength="256"></label>
-        <label class="hidden" id="setupConfirmField">Passwort wiederholen<input id="setupConfirm" type="password" autocomplete="new-password" maxlength="256"></label>
         <button class="primary-button" id="connect" type="submit" disabled>App-Verwaltung öffnen</button>
       </form>
       <p class="form-status" id="loginStatus" role="status" aria-live="polite"></p>
     </section>
 
     <section class="dashboard hidden" id="dashboard">
+      <p class="form-status hidden" id="serverStatus" role="status">Speichern und Uploads sind noch nicht verfügbar: Die Repository-Verbindung muss serverseitig eingerichtet werden. Du kannst dein Passwort bereits ändern.</p>
       <section class="source-card glass" aria-label="Source">
         <img id="sourceIcon" src="../assets/source-icon.png" alt="Source-Icon" width="64" height="64">
         <div class="source-copy"><p class="eyebrow">DEINE SOURCE</p><h2 id="sourceName">{{SOURCE_NAME}}</h2><p id="sourceSubtitle"></p><span id="sourceColor" class="source-color" aria-label="Akzentfarbe"></span></div>

@@ -38,20 +38,20 @@ Neue Versionen erhalten beim Upload aus `/admin/` automatisch einen eigenen Rele
 
 ## Admin-Zugang
 
-Der reguläre Zugang zu `/admin/` erfolgt mit einem Passwort. Über **Passwort ändern** im Dashboard kannst du es nach Eingabe des aktuellen Passworts ändern. Alle anderen Sitzungen werden dabei ungültig.
+Der Zugang zu `/admin/` erfolgt ausschließlich mit einem Passwort. Über **Passwort ändern** im Panel kannst du es nach Eingabe des aktuellen Passworts ändern. Alle anderen Sitzungen werden dabei ungültig. Es gibt weder Token-Felder noch eine GitHub-Verbindungseinrichtung im Browser.
 
-Wenn der Cloudflare-Administrator bereits ein temporäres Passwort bereitgestellt hat, erfolgt zuerst die Passwortanmeldung und dann die einmalige GitHub-Verbindung im geschützten Bereich. Danach das temporäre Passwort im Panel ersetzen. Ein temporärer Zugang speichert zunächst keinen GitHub-Token; die App-Verwaltung bleibt bis zur Verbindung gesperrt.
+Das initiale oder temporäre Passwort wird serverseitig als gesalzener PBKDF2-Hash in D1 eingerichtet. Nach der Anmeldung kann es sofort im Panel ersetzt werden. Ohne serverseitige Repository-Verbindung sind Katalogansicht und Passwortwechsel möglich; Änderungen an Apps/Source sowie Uploads bleiben gesperrt.
 
-Nur bei der **ersten Einrichtung** gibst du einmal einen GitHub-Token des Repository-Eigentümers `zynthec-dev` ein und legst ein Passwort mit mindestens 12 Zeichen fest. Der Fine-grained Token sollte auf `zynthec-dev/zynthec-altstore-source` beschränkt sein mit:
+Für Speichern und Uploads benötigt ausschließlich der Server einen GitHub-Zugang. Ein Cloudflare-Administrator hinterlegt ihn als verschlüsseltes Secret **`GITHUB_TOKEN`** im Pages-Projekt. Ein Fine-grained Token sollte auf `zynthec-dev/zynthec-altstore-source` beschränkt sein mit:
 
 - Repository permission `Contents: Read and write`
 - möglichst kurzer Laufzeit
 
-Der Token wird mit AES-GCM verschlüsselt in der Cloudflare-D1-Datenbank gespeichert; der separate Schlüssel `ADMIN_ENCRYPTION_KEY` liegt als Cloudflare-Secret vor. Passwörter werden ausschließlich als gesalzener PBKDF2-SHA-256-Hash gespeichert. Der Browser erhält eine Secure/HttpOnly/SameSite-Strict-Sitzung mit acht Stunden Laufzeit, nicht den GitHub-Token. Abmelden widerruft die Sitzung serverseitig. Anmeldeversuche sind pro IP und global begrenzt; schreibende Anfragen benötigen einen passenden Origin und einen eigenen Header. GitHub-Anfragen werden nur an die für die App-Verwaltung zugelassenen Endpunkte dieses Repositorys weitergeleitet.
+Der Server unterstützt außerdem bereits vorhandene, mit AES-GCM verschlüsselte Tokens in D1; der separate Schlüssel `ADMIN_ENCRYPTION_KEY` liegt als Cloudflare-Secret vor. Es existiert kein öffentlicher Endpunkt zur Einrichtung oder Übertragung eines Tokens. Passwörter werden ausschließlich als gesalzener PBKDF2-SHA-256-Hash gespeichert. Der Browser erhält eine Secure/HttpOnly/SameSite-Strict-Sitzung mit acht Stunden Laufzeit, nicht den GitHub-Token. Abmelden widerruft die Sitzung serverseitig. Anmeldeversuche sind pro IP und global begrenzt; schreibende Anfragen benötigen einen passenden Origin und einen eigenen Header. GitHub-Anfragen werden nur an die für die App-Verwaltung zugelassenen Endpunkte dieses Repositorys weitergeleitet.
 
 Die Browser-IPA wird als zunächst unreferenzierter Git-Blob bei GitHub abgelegt; GitHub Actions überführt sie ins Release. Bei abgelaufenem GitHub-Token ist eine serverseitige Erneuerung erforderlich; ein Passwortwechsel verlängert dessen Laufzeit nicht.
 
-Für ein neues Deployment: D1-Binding `ADMIN_DB` aus `wrangler.jsonc` einrichten, `migrations/0001_admin.sql` anwenden und `ADMIN_ENCRYPTION_KEY` als zufälliges 32-Byte-Hex-Secret setzen. Ohne Binding oder Secret bleibt der Admin-Zugang gesperrt; der öffentliche Feed ist weiterhin lesbar. Für lokale Entwicklung isolierte D1-Daten und ein eigenes `.dev.vars`-Secret verwenden, niemals Produktionsdaten. Nach Verlust des Passworts kann der Cloudflare-Administrator die Admin-Konfiguration und Sitzungen in D1 zurücksetzen und den Zugang erneut einrichten. Dabei wird der gespeicherte Token entfernt; der App-Katalog bleibt unberührt. Den Verschlüsselungsschlüssel nicht einfach rotieren: Bereits gespeicherte Tokens müssen dabei neu verschlüsselt oder neu eingerichtet werden.
+Für ein neues Deployment: D1-Binding `ADMIN_DB` aus `wrangler.jsonc` einrichten, `migrations/0001_admin.sql` anwenden und `ADMIN_ENCRYPTION_KEY` als zufälliges 32-Byte-Hex-Secret setzen. Ohne Binding oder Secret bleibt der Admin-Zugang gesperrt; der öffentliche Feed ist weiterhin lesbar. Für lokale Entwicklung isolierte D1-Daten und eigene `.dev.vars`-Secrets verwenden, niemals Produktionsdaten. Nach Verlust des Passworts kann der Cloudflare-Administrator den Passwort-Hash mit neuem Salt aktualisieren, die Revision erhöhen und Sitzungen widerrufen; App-Katalog und Repository-Verbindung bleiben unberührt. Den Verschlüsselungsschlüssel nicht einfach rotieren: Bereits gespeicherte D1-Tokens müssen dabei neu verschlüsselt oder neu eingerichtet werden.
 
 Die App-Verwaltung ermöglicht:
 

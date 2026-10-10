@@ -4,7 +4,7 @@ const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, character =>
 })[character]);
 
 const BRANCH = "main";
-const state = { initialized: true, content: null, file: null, edit: null, settings: null, settingsFile: null, sourceSaving: false, iconPreview: null, sourceDraftPreview: null };
+const state = { content: null, file: null, edit: null, settings: null, settingsFile: null, sourceSaving: false, iconPreview: null, sourceDraftPreview: null };
 const sourceFields = [
   ["name", "Anzeigename", "text"],
   ["subtitle", "Kurzbeschreibung", "text"],
@@ -320,23 +320,11 @@ async function auth(action, body) {
 async function showDashboard() {
   const status = await auth("status");
   $("#changePassword").classList.remove("hidden");
-  if (!status.connected) {
-    state.connectionPending = true;
-    $("#setupTokenField").classList.remove("hidden");
-    $("#setupToken").required = true;
-    $("#setupConfirmField").classList.add("hidden");
-    $("#setupConfirm").required = false;
-    $("#password").closest("label").classList.add("hidden");
-    $("#password").required = false;
-    $("#loginDescription").textContent = "Du bist angemeldet. Dein temporäres Passwort kannst du oben über „Passwort ändern“ ersetzen. Verbinde einmal GitHub, damit Apps und Source-Einstellungen gespeichert werden können.";
-    $("#connect").textContent = "GitHub verbinden";
-    $("#connect").disabled = false;
-    $("#logout").classList.remove("hidden");
-    $("#loginStatus").textContent = "";
-    return;
-  }
-  state.connectionPending = false;
   await load();
+  $("#serverStatus").classList.toggle("hidden", status.connected);
+  $("#addApp").disabled = !status.connected;
+  $("#editSource").disabled = !status.connected;
+  $("#appsList").querySelectorAll("button").forEach(button => { button.disabled = !status.connected; });
   $("#loginPanel").classList.add("hidden");
   $("#dashboard").classList.remove("hidden");
   $("#logout").classList.remove("hidden");
@@ -347,17 +335,8 @@ $("#loginForm").onsubmit = async event => {
   $("#connect").disabled = true;
   $("#loginStatus").textContent = "Admin-Zugang wird geprüft …";
   try {
-    if (state.connectionPending) {
-      await auth("connection", { token: $("#setupToken").value.trim() });
-      $("#loginForm").reset();
-      await showDashboard();
-      return;
-    }
     const password = $("#password").value;
-    if (!state.initialized && password !== $("#setupConfirm").value) throw new Error("Die Passwörter stimmen nicht überein.");
-    await auth(state.initialized ? "login" : "setup", { password,
-      ...(!state.initialized ? { token: $("#setupToken").value.trim() } : {}) });
-    state.initialized = true;
+    await auth("login", { password });
     $("#loginForm").reset();
     await showDashboard();
   } catch (error) { $("#loginStatus").textContent = error.message; }
@@ -413,17 +392,10 @@ try { sessionStorage.removeItem("zynthecAdmin"); } catch {}
 async function initializeLogin() {
   try {
     const status = await auth("status");
-    state.initialized = status.initialized;
     if (status.authenticated) { await showDashboard(); return; }
     if (!status.initialized) {
-      $("#setupTokenField").classList.remove("hidden");
-      $("#setupConfirmField").classList.remove("hidden");
-      $("#setupToken").required = true;
-      $("#setupConfirm").required = true;
-      $("#password").minLength = 12;
-      $("#password").autocomplete = "new-password";
-      $("#loginDescription").textContent = "Einmalige Einrichtung: Bestätige den GitHub-Zugang des Repository-Eigentümers und lege dein Admin-Passwort fest. Danach meldest du dich nur noch mit Passwort an.";
-      $("#connect").textContent = "Passwortzugang einrichten";
+      $("#loginStatus").textContent = "Der Admin-Zugang muss serverseitig eingerichtet werden.";
+      return;
     }
     $("#connect").disabled = false;
   } catch (error) { $("#loginStatus").textContent = error.message; }

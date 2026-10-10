@@ -35,7 +35,7 @@ async function tokenCipher(value, secret, decrypt = false) {
 
 async function github(path, token, options = {}) {
   return fetch(`https://api.github.com${path}`, { ...options, redirect: "error", headers: {
-    "Accept": "application/vnd.github+json", "Authorization": `Bearer ${token}`,
+    "Accept": "application/vnd.github+json", ...(token ? { "Authorization": `Bearer ${token}` } : {}),
     "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "zLoader-Source-Admin",
     "Content-Type": "application/json",
   } });
@@ -101,32 +101,13 @@ export async function adminAPI(request, env) {
   try {
     const config = await db.prepare("SELECT * FROM admin_config WHERE id=1").first();
     const signedIn = config && await session(request, db);
-    if (route === "status" && request.method === "GET") return json({ initialized: !!config, authenticated: !!signedIn, connected: !!config?.github_token });
-    if (route === "connection" && request.method === "POST") {
-      if (!signedIn) return json({ message: "Bitte anmelden." }, 401);
-      if (config.github_token) return json({ message: "GitHub ist bereits verbunden." }, 409);
-      if (await rateLimited(request, db)) return json({ message: "Zu viele Versuche. Bitte in 15 Minuten erneut versuchen." }, 429);
-      const text = await request.text();
-      if (text.length > 8192) return json({ message: "Anfrage zu groß." }, 413);
-      const body = JSON.parse(text);
-      if (typeof body.token !== "string" || body.token.length > 512) return json({ message: "GitHub-Zugang fehlt." }, 400);
-      const [userResponse, repoResponse] = await Promise.all([
-        github("/user", body.token), github(`/repos/${REPO}`, body.token),
-      ]);
-      if (!userResponse.ok || !repoResponse.ok) return json({ message: "GitHub-Zugang konnte nicht bestätigt werden." }, 403);
-      const user = await userResponse.json(), repo = await repoResponse.json();
-      if (user.login !== "zynthec-dev" || !repo.permissions?.push) return json({ message: "GitHub-Token des Repository-Eigentümers mit Schreibrechten benötigt." }, 403);
-      const encrypted = await tokenCipher(body.token, env.ADMIN_ENCRYPTION_KEY);
-      const result = await db.prepare("UPDATE admin_config SET github_token=? WHERE id=1 AND github_token='' AND revision=?")
-        .bind(encrypted, config.revision).run();
-      if (!result.meta.changes) return json({ message: "Der Zugang wurde inzwischen geändert. Bitte erneut anmelden." }, 409);
-      return json({ connected: true });
-    }
+    const connected = !!(env.GITHUB_TOKEN || config?.github_token);
+    if (route === "status" && request.method === "GET") return json({ initialized: !!config, authenticated: !!signedIn, connected });
     if (route === "logout" && request.method === "POST") {
       if (signedIn) await db.prepare("DELETE FROM admin_sessions WHERE hash=?").bind(signedIn.hash).run();
       return json({ authenticated: false }, 200, { "Set-Cookie": cookie("", 0) });
     }
-    if (["setup", "login", "password"].includes(route) && request.method === "POST") {
+    if (["login", "password"].includes(route) && request.method === "POST") {
       if (route === "password" && !signedIn) return json({ message: "Bitte anmelden." }, 401);
       if (await rateLimited(request, db)) return json({ message: "Zu viele Versuche. Bitte in 15 Minuten erneut versuchen." }, 429, { "Retry-After": "900" });
       if (Number(request.headers.get("Content-Length") || 0) > 8192) return json({ message: "Anfrage zu groß." }, 413);
@@ -141,21 +122,6 @@ export async function adminAPI(request, env) {
       if (body.password.length < 12) return json({ message: "Das neue Passwort muss mindestens 12 Zeichen lang sein." }, 400);
       const salt = random();
       const hash = await passwordHash(body.password, salt);
-      if (route === "setup") {
-        if (config) return json({ message: "Der Zugang ist bereits eingerichtet. Bitte anmelden." }, 409);
-        if (typeof body.token !== "string" || body.token.length > 512) return json({ message: "GitHub-Zugang fehlt." }, 400);
-        const [userResponse, repoResponse] = await Promise.all([
-          github("/user", body.token), github(`/repos/${REPO}`, body.token),
-        ]);
-        if (!userResponse.ok || !repoResponse.ok) return json({ message: "GitHub-Zugang konnte nicht bestätigt werden." }, 403);
-        const user = await userResponse.json(), repo = await repoResponse.json();
-        if (user.login !== "zynthec-dev" || !repo.permissions?.push) return json({ message: "Nur der Repository-Eigentümer mit Schreibrechten kann den Zugang einrichten." }, 403);
-        const encrypted = await tokenCipher(body.token, env.ADMIN_ENCRYPTION_KEY);
-        const result = await db.prepare("INSERT OR IGNORE INTO admin_config(id,salt,password_hash,revision,github_token) VALUES(1,?,?,1,?)")
-          .bind(salt, hash, encrypted).run();
-        if (!result.meta.changes) return json({ message: "Der Zugang wurde bereits eingerichtet." }, 409);
-        return createSession(db, 1);
-      }
       if (typeof body.currentPassword !== "string" || body.currentPassword.length > 256
           || !equal(await passwordHash(body.currentPassword, config.salt), config.password_hash)) return json({ message: "Das aktuelle Passwort ist nicht korrekt." }, 401);
       const result = await db.prepare("UPDATE admin_config SET salt=?,password_hash=?,revision=revision+1 WHERE id=1 AND revision=?")
@@ -166,13 +132,30 @@ export async function adminAPI(request, env) {
     }
     if (route.startsWith("github/") || route === "github") {
       if (!signedIn) return json({ message: "Bitte anmelden." }, 401);
-      if (!config.github_token) return json({ message: "Bitte zuerst GitHub verbinden." }, 409);
       if (request.headers.get("X-Admin-Request") !== "1") return json({ message: "Nicht erlaubte Anfrage." }, 403);
       const path = route.slice("github".length);
       const bodyText = mutating ? await request.text() : undefined;
       const body = bodyText ? JSON.parse(bodyText) : {};
       if (!permitted(path, request.method, body)) return json({ message: "Dieser Zugriff ist nicht Teil der App-Verwaltung." }, 403);
-      const token = await tokenCipher(config.github_token, env.ADMIN_ENCRYPTION_KEY, true);
+      if (!connected) {
+        if (request.method !== "GET") return json({ message: "Speichern ist noch nicht verfügbar: Die Repository-Verbindung muss serverseitig eingerichtet werden." }, 503);
+        // Public catalog viewing does not require a credential or a rate-limited API lookup.
+        if (/^\/contents\/catalog\/(content|settings)\.json$/.test(path)) {
+          const ref = url.searchParams.get("ref") || "main";
+          if (!/^(main|[a-f0-9]{40})$/.test(ref)) return json({ message: "Ungültiger Stand." }, 400);
+          const raw = await fetch(`https://raw.githubusercontent.com/${REPO}/${ref}${path.slice("/contents".length)}`);
+          if (!raw.ok) return json({ message: "Der Katalog konnte nicht geladen werden." }, raw.status);
+          const bytes = new Uint8Array(await raw.arrayBuffer());
+          const header = encoder.encode(`blob ${bytes.length}\0`);
+          const blob = new Uint8Array(header.length + bytes.length);
+          blob.set(header); blob.set(bytes, header.length);
+          const sha = hex(await crypto.subtle.digest("SHA-1", blob));
+          let binary = "";
+          for (const byte of bytes) binary += String.fromCharCode(byte);
+          return json({ sha, content: btoa(binary), encoding: "base64" });
+        }
+      }
+      const token = env.GITHUB_TOKEN || (config.github_token ? await tokenCipher(config.github_token, env.ADMIN_ENCRYPTION_KEY, true) : "");
       const upstream = await github(`/repos/${REPO}${path}${url.search}`, token, { method: request.method, body: bodyText });
       return new Response(upstream.body, { status: upstream.status, headers: {
         "Content-Type": "application/json", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",

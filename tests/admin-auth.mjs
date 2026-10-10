@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const code = await readFile(new URL('../site/admin-api.js', import.meta.url), 'utf8');
-const { adminAPI } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
+const { adminAPI, passwordHash } = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
 const folder = await mkdtemp(join(tmpdir(), 'source-admin-auth-'));
 const database = join(folder, 'admin.sqlite');
 // Use real SQLite to exercise D1 SQL without adding runtime/test dependencies.
@@ -40,11 +40,11 @@ const call = (route, body, cookie, headers) => adminAPI(request(route,body,cooki
 const password = 'test-only-password-123';
 const token = 'test-only-not-a-real-token';
 const originalFetch=globalThis.fetch;
-let owner='zynthec-dev'; let upstreamCalls=0;
+let upstreamCalls=0;
 globalThis.fetch=async (url, options) => {
   upstreamCalls++;
+  if(url.startsWith('https://raw.githubusercontent.com/')) return new Response('{"name":"Public catalog"}');
   assert.equal(options.headers.Authorization, `Bearer ${token}`);
-  if(url.endsWith('/user')) return Response.json({login:owner});
   if(url.endsWith('/zynthec-altstore-source')) return Response.json({permissions:{push:true}});
   return Response.json({content:'test-content'});
 };
@@ -54,11 +54,17 @@ try {
   assert.equal((await adminAPI(request('status'),{})).status,503);
   assert.deepEqual(await (await call('status')).json(),{initialized:false,authenticated:false,connected:false});
   assert.equal((await call('github/contents/catalog/content.json')).status,401);
-  assert.equal((await call('setup',{password,token},null,{Origin:'https://evil.example'})).status,403);
-  owner='someone-else';
-  assert.equal((await call('setup',{password,token})).status,403);
-  owner='zynthec-dev';
-  let response=await call('setup',{password,token});
+  assert.equal((await call('login',{password},null,{Origin:'https://evil.example'})).status,403);
+  assert.equal((await call('setup',{password,token})).status,404);
+  assert.equal((await call('connection',{token})).status,404);
+  // Administrative provisioning is server-side only, never a browser token form.
+  const salt='cd'.repeat(32);
+  const key=await crypto.subtle.importKey('raw',Buffer.from(env.ADMIN_ENCRYPTION_KEY,'hex'),'AES-GCM',false,['encrypt']);
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const encrypted=Buffer.from(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(token))).toString('hex');
+  await db.prepare('INSERT INTO admin_config(id,salt,password_hash,revision,github_token) VALUES(1,?,?,1,?)')
+    .bind(salt,await passwordHash(password,salt),`${Buffer.from(iv).toString('hex')}:${encrypted}`).run();
+  let response=await call('login',{password});
   assert.equal(response.status,200);
   const cookie=response.headers.get('set-cookie').split(';')[0];
   assert.match(response.headers.get('set-cookie'),/Secure; HttpOnly; SameSite=Strict/);
@@ -66,7 +72,7 @@ try {
   const config=await db.prepare('SELECT * FROM admin_config').first();
   assert.notEqual(config.github_token,token);
   assert.notEqual(config.password_hash,password);
-  assert.equal((await call('setup',{password,token})).status,409);
+  assert.equal((await call('setup',{password,token})).status,404);
   assert.equal((await call('login',{password:'wrong-password'})).status,401);
   response=await call('login',{password});
   assert.equal(response.status,200);
@@ -91,19 +97,22 @@ try {
   await db.prepare('DELETE FROM admin_attempts').run();
   for(let i=0;i<8;i++) assert.equal((await call('login',{password:'incorrect'})).status,401);
   assert.equal((await call('login',{password:'incorrect'})).status,429);
-  // Provisioned temporary password: authentication works before token setup;
-  // only that authenticated user can establish the one-time GitHub connection.
+  // Missing credentials allow catalog viewing and password changes but no writes.
   await db.prepare('DELETE FROM admin_attempts').run();
   await db.prepare("UPDATE admin_config SET github_token='' WHERE id=1").run();
-  assert.equal((await call('connection',{token})).status,401);
+  assert.equal((await call('connection',{token})).status,404);
   response=await call('login',{password:'new-test-password-123'});
   const pendingCookie=response.headers.get('set-cookie').split(';')[0];
   assert.equal((await (await call('status',undefined,pendingCookie)).json()).connected,false);
-  assert.equal((await call('github/contents/catalog/content.json',undefined,pendingCookie)).status,409);
-  assert.equal((await call('connection',{token},pendingCookie)).status,200);
+  const catalog=await (await call('github/contents/catalog/content.json',undefined,pendingCookie)).json();
+  assert.equal(JSON.parse(Buffer.from(catalog.content,'base64')).name,'Public catalog');
+  assert.match(catalog.sha,/^[a-f0-9]{40}$/);
+  assert.equal((await call('github/git/blobs',{encoding:'base64',content:'test'},pendingCookie)).status,503);
+  env.GITHUB_TOKEN=token;
   assert.equal((await (await call('status',undefined,pendingCookie)).json()).connected,true);
-  assert.equal((await call('connection',{token},pendingCookie)).status,409);
-  console.log('PASS: password setup, owner verification, encryption, login, cookies, proxy restriction, CSRF, password change, session revocation, logout and throttling.');
+  assert.equal((await call('github/contents/catalog/content.json',undefined,pendingCookie)).status,200);
+  assert.equal((await call('connection',{token},pendingCookie)).status,404);
+  console.log('PASS: password-only login, encrypted/server-only credentials, public catalog fallback, write blocking, cookies, proxy restrictions, CSRF, password change, revocation, logout and throttling.');
 } finally {
   globalThis.fetch=originalFetch;
   await rm(folder,{recursive:true,force:true});
